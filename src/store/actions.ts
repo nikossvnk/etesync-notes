@@ -6,7 +6,7 @@ import { createAction as origCreateAction, ActionMeta } from "redux-actions";
 import * as Etebase from "etebase";
 
 import { ConnectionInfo, SettingsType } from "./";
-import { Message } from "./reducers";
+import { Message, PendingCollection } from "./reducers";
 
 type FunctionAny = (...args: any[]) => any;
 
@@ -140,6 +140,30 @@ export const setSyncCollection = createAction(
       uid,
       stoken,
     };
+  }
+);
+
+export const unsetSyncCollection = createAction(
+  "UNSET_SYNC_COLLECTION",
+  (uid: string) => {
+    return uid;
+  }
+);
+
+export const setPendingCollection = createAction(
+  "SET_PENDING_COLLECTION",
+  (colUid: string, pending: PendingCollection) => {
+    return {
+      colUid,
+      pending,
+    };
+  }
+);
+
+export const unsetPendingCollection = createAction(
+  "UNSET_PENDING_COLLECTION",
+  (colUid: string) => {
+    return colUid;
   }
 );
 

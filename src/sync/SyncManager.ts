@@ -9,8 +9,8 @@ import * as TaskManager from "expo-task-manager";
 import { store, persistor, StoreState, asyncDispatch } from "../store";
 
 import { credentialsSelector } from "../credentials";
-import { setSyncCollection, setSyncGeneral, setCacheCollection, unsetCacheCollection, setCacheItem, setCacheItemMulti, setSyncItem, unsetSyncItem, addError, performSync, pushMessage, setSyncStatus } from "../store/actions";
-import { CachedItem } from "../store/reducers";
+import { setSyncCollection, unsetSyncCollection, setSyncGeneral, setCacheCollection, unsetCacheCollection, setPendingCollection, unsetPendingCollection, setCacheItem, setCacheItemMulti, setSyncItem, unsetSyncItem, addError, performSync, pushMessage, setSyncStatus } from "../store/actions";
+import { CachedCollection, CachedItem } from "../store/reducers";
 import * as C from "../constants";
 import { startTask, arrayToChunkIterator } from "../helpers";
 
@@ -83,7 +83,15 @@ export class SyncManager {
       for (const col of collections.data) {
         const collectionType = col.getCollectionType();
         if (this.COLLECTION_TYPES.includes(collectionType)) {
-          if (col.isDeleted) {
+          // Never overwrite notebooks that have local changes waiting to be pushed.
+          // The next push will detect the conflict and resolve it.
+          const pending = this.getPendingCollection(col.uid);
+          if (pending) {
+            this.resyncNeeded = true;
+            if (!pending.deletedCache && !col.isDeleted) {
+              await this.fetchCollection(col);
+            }
+          } else if (col.isDeleted) {
             store.dispatch(unsetCacheCollection(colMgr, col.uid));
           } else {
             store.dispatch(setCacheCollection(colMgr, col));
@@ -93,6 +101,7 @@ export class SyncManager {
       }
       if (collections.removedMemberships) {
         for (const removed of collections.removedMemberships) {
+          store.dispatch(unsetPendingCollection(removed.uid));
           store.dispatch(unsetCacheCollection(colMgr, removed.uid));
         }
       }
@@ -183,14 +192,147 @@ export class SyncManager {
     store.dispatch(unsetSyncItem(col.uid, itemUid));
   }
 
-  private async pushAll() {
+  private getPendingCollection(colUid: string) {
     const storeState = store.getState() as unknown as StoreState;
-    const etebase = (await credentialsSelector(storeState))!;
+    return storeState.sync.pendingCollections.get(colUid);
+  }
+
+  private getCachedCollection(colUid: string) {
+    const storeState = store.getState() as unknown as StoreState;
+    return storeState.cache.collections.get(colUid);
+  }
+
+  // Called after a notebook was uploaded. "uploadedFrom" is the cache entry the uploaded notebook was loaded from.
+  private async markCollectionPushed(colMgr: Etebase.CollectionManager, col: Etebase.Collection, uploadedFrom: CachedCollection) {
+    const current = this.getCachedCollection(col.uid);
+    if (current === uploadedFrom) {
+      await asyncDispatch(setCacheCollection(colMgr, col));
+      store.dispatch(unsetPendingCollection(col.uid));
+      return;
+    }
+
+    if (current) {
+      // The notebook was changed locally while we were uploading it. Reapply the local
+      // changes on top of the uploaded revision and leave it queued for the next push.
+      col.setMeta(colMgr.cacheLoad(current.cache).getMeta());
+      await asyncDispatch(setCacheCollection(colMgr, col));
+      store.dispatch(setPendingCollection(col.uid, {}));
+    } else {
+      // The notebook was deleted locally while we were uploading it
+      col.delete();
+      store.dispatch(setPendingCollection(col.uid, { deletedCache: Etebase.toBase64(colMgr.cacheSave(col)) }));
+    }
+    this.resyncNeeded = true;
+  }
+
+  private async fetchRemoteCollection(colMgr: Etebase.CollectionManager, colUid: string) {
+    try {
+      const remote = await colMgr.fetch(colUid);
+      return (remote.isDeleted) ? undefined : remote;
+    } catch (e) {
+      if (e instanceof Etebase.NotFoundError) {
+        return undefined;
+      }
+      throw e;
+    }
+  }
+
+  // Drop the local changes of a notebook and go back to what the server has
+  private async revertCollection(colMgr: Etebase.CollectionManager, colUid: string, remote: Etebase.Collection | undefined) {
+    store.dispatch(unsetPendingCollection(colUid));
+    if (remote) {
+      // The notes may not be available locally anymore, so fetch all of them again
+      store.dispatch(unsetSyncCollection(colUid));
+      await asyncDispatch(setCacheCollection(colMgr, remote));
+      await this.fetchCollection(remote);
+    } else {
+      store.dispatch(unsetCacheCollection(colMgr, colUid));
+    }
+  }
+
+  // The notebook was changed both locally and on the server
+  private async resolveCollectionConflict(colMgr: Etebase.CollectionManager, local: Etebase.Collection, uploadedFrom: CachedCollection | undefined) {
+    const name = local.getMeta().name;
+    const remote = await this.fetchRemoteCollection(colMgr, local.uid);
+
+    if (!uploadedFrom) {
+      // A local deletion never wins over a change made elsewhere, the notebook is just restored.
+      await this.revertCollection(colMgr, local.uid, remote);
+      if (remote) {
+        store.dispatch(pushMessage({ message: `"${name}" was changed elsewhere, so it was not deleted.`, severity: "warning" }));
+      }
+      return;
+    }
+
+    if (!remote) {
+      await this.revertCollection(colMgr, local.uid, remote);
+      store.dispatch(pushMessage({ message: `"${name}" was deleted elsewhere.`, severity: "warning" }));
+      return;
+    }
+
+    // Unlike notes there is nothing to keep both of, so the local details (name, description, color) win
+    remote.setMeta({ ...remote.getMeta(), ...local.getMeta() });
+    await colMgr.transaction(remote);
+    await this.markCollectionPushed(colMgr, remote, uploadedFrom);
+  }
+
+  private async pushCollections(etebase: Etebase.Account) {
+    const storeState = store.getState() as unknown as StoreState;
+    const colMgr = etebase.getCollectionManager();
+
+    for (const [colUid, pending] of storeState.sync.pendingCollections.entries()) {
+      const cacheCollection = (pending.deletedCache) ? undefined : this.getCachedCollection(colUid);
+      if (!pending.deletedCache && !cacheCollection) {
+        // The notebook is not available locally anymore, nothing to push
+        store.dispatch(unsetPendingCollection(colUid));
+        continue;
+      }
+
+      const col = colMgr.cacheLoad((pending.deletedCache) ? Etebase.fromBase64(pending.deletedCache) : cacheCollection!.cache);
+      try {
+        // A transaction (unlike an upload) fails if the notebook was changed on the server
+        await colMgr.transaction(col);
+        if (cacheCollection) {
+          await this.markCollectionPushed(colMgr, col, cacheCollection);
+        } else {
+          store.dispatch(unsetPendingCollection(colUid));
+        }
+      } catch (e) {
+        if (e instanceof Etebase.ConflictError) {
+          try {
+            await this.resolveCollectionConflict(colMgr, col, cacheCollection);
+          } catch (e) {
+            if (!(e instanceof Etebase.ConflictError)) {
+              throw e;
+            }
+            // Changed on the server yet again, try again with the next sync
+            this.resyncNeeded = true;
+          }
+        } else if ((e instanceof Etebase.PermissionDeniedError) && !pending.isNew) {
+          await this.revertCollection(colMgr, colUid, await this.fetchRemoteCollection(colMgr, colUid));
+          store.dispatch(pushMessage({ message: `You are not allowed to change "${col.getMeta().name}", so your changes to it were discarded.`, severity: "error" }));
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
+  private async pushAll() {
+    const etebase = (await credentialsSelector(store.getState() as unknown as StoreState))!;
+    // Notebooks go first, notes can't be pushed to a notebook the server doesn't know yet
+    await this.pushCollections(etebase);
+
+    const storeState = store.getState() as unknown as StoreState;
     const cacheCollections = storeState.cache.collections;
     const cacheItems = storeState.cache.items;
     const syncItemsAll = storeState.sync.items;
 
     for (const [colUid, syncItems] of syncItemsAll.entries()) {
+      if (this.getPendingCollection(colUid)?.isNew) {
+        // The notebook could not be created on the server yet, its notes have to wait
+        continue;
+      }
       const cacheCollection = cacheCollections.get(colUid);
       for (const chunk of arrayToChunkIterator(Array.from(syncItems.keys()), this.BATCH_SIZE)) {
         const entries = [];
@@ -301,6 +443,29 @@ export async function saveItemsLocally(etebase: Etebase.Account, col: Etebase.Co
   for (const item of items) {
     await asyncDispatch(setCacheItem(col, itemMgr, item));
     store.dispatch(setSyncItem(col.uid, item.uid));
+  }
+  requestSync(etebase, true);
+}
+
+// Save a notebook to the local cache and queue it to be pushed to the server.
+// This always works, even when offline.
+export async function saveCollectionLocally(etebase: Etebase.Account, colMgr: Etebase.CollectionManager, col: Etebase.Collection, isNew: boolean) {
+  const pending = (store.getState() as unknown as StoreState).sync.pendingCollections.get(col.uid);
+  await asyncDispatch(setCacheCollection(colMgr, col));
+  store.dispatch(setPendingCollection(col.uid, (isNew || pending?.isNew) ? { isNew: true } : {}));
+  requestSync(etebase, true);
+}
+
+// Remove a notebook locally and queue the deletion to be pushed to the server.
+// Expects a collection that delete() was already called on.
+export function deleteCollectionLocally(etebase: Etebase.Account, colMgr: Etebase.CollectionManager, col: Etebase.Collection) {
+  const pending = (store.getState() as unknown as StoreState).sync.pendingCollections.get(col.uid);
+  store.dispatch(unsetCacheCollection(colMgr, col.uid));
+  if (pending?.isNew) {
+    // It was never uploaded, so there is nothing to delete on the server
+    store.dispatch(unsetPendingCollection(col.uid));
+  } else {
+    store.dispatch(setPendingCollection(col.uid, { deletedCache: Etebase.toBase64(colMgr.cacheSave(col)) }));
   }
   requestSync(etebase, true);
 }

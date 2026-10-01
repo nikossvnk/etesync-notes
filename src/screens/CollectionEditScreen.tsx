@@ -11,7 +11,8 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
-import { collectionUpload, pushMessage } from "../store/actions";
+import { pushMessage } from "../store/actions";
+import { saveCollectionLocally, deleteCollectionLocally } from "../sync/SyncManager";
 
 import TextInput from "../widgets/TextInput";
 import ScrollView from "../widgets/ScrollView";
@@ -120,7 +121,7 @@ export default function CollectionEditScreen(props: PropsType) {
         collection = await colMgr.create(colType, meta, "");
       }
 
-      await dispatch(collectionUpload(colMgr, collection));
+      await saveCollectionLocally(etebase, colMgr, collection, !colUid);
       if (colUid) {
         dispatch(pushMessage({ message: "Notebook saved", severity: "success" }));
         navigation.goBack();
@@ -239,7 +240,8 @@ function RightAction(props: { colUid: string | undefined }) {
           const meta = collection.getMeta();
           collection.setMeta({ ...meta, mtime });
           collection.delete();
-          await dispatch(collectionUpload(colMgr, collection));
+          deleteCollectionLocally(etebase, colMgr, collection);
+          setConfirmationVisible(false);
           dispatch(pushMessage({ message: "Collection deleted", severity: "success" }));
           navigation.navigate("Home");
         }}

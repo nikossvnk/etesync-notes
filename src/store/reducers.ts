@@ -21,6 +21,11 @@ export interface SyncCollectionsEntryData extends BaseModel {
 
 export type SyncCollectionsData = ImmutableMap<string, SyncCollectionsEntryData>;
 export type SyncItemsData = ImmutableMap<string, ImmutableMap<string, true>>;
+// Notebooks with local changes that were not pushed to the server yet.
+// isNew: the notebook was created locally and doesn't exist on the server yet.
+// deletedCache: the notebook was deleted locally, this is its (base64 encoded) cache to push the deletion with.
+export type PendingCollection = { isNew?: boolean, deletedCache?: string };
+export type PendingCollectionsData = ImmutableMap<string, PendingCollection>;
 
 export type CachedItem = { cache: Uint8Array, meta: Etebase.ItemMetadata, isDeleted: boolean };
 export type CachedItems = ImmutableMap<string, CachedItem>;
@@ -71,7 +76,35 @@ export const syncCollections = handleActions(
       }
       return state;
     },
+    [actions.unsetSyncCollection.toString()]: (state: SyncCollectionsData, action: Action<any>) => {
+      if (action.payload !== undefined) {
+        return state.remove(action.payload as string);
+      }
+      return state;
+    },
     [actions.logout.toString()]: (state: SyncCollectionsData, _action: any) => {
+      return state.clear();
+    },
+  },
+  ImmutableMap({})
+);
+
+export const pendingCollections = handleActions(
+  {
+    [actions.setPendingCollection.toString()]: (state: PendingCollectionsData, action: Action<any>) => {
+      if (action.payload !== undefined) {
+        const { colUid, pending } = action.payload as { colUid: string, pending: PendingCollection };
+        return state.set(colUid, pending);
+      }
+      return state;
+    },
+    [actions.unsetPendingCollection.toString()]: (state: PendingCollectionsData, action: Action<any>) => {
+      if (action.payload !== undefined) {
+        return state.remove(action.payload as string);
+      }
+      return state;
+    },
+    [actions.logout.toString()]: (state: PendingCollectionsData, _action: any) => {
       return state.clear();
     },
   },

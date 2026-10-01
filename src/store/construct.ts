@@ -15,7 +15,7 @@ import {
   SettingsType,
   fetchCount, syncCount, credentials, settingsReducer, syncStatusReducer, lastSyncReducer, connectionReducer, errorsReducer,
   CredentialsData, SyncCollectionsData, SyncGeneralData, ConnectionInfo,
-  collections, items, syncCollections, syncItems, syncGeneral, CachedCollectionsData, CachedItemsData, SyncItemsData, messagesReducer, Message,
+  collections, items, syncCollections, syncItems, syncGeneral, pendingCollections, CachedCollectionsData, CachedItemsData, SyncItemsData, PendingCollectionsData, messagesReducer, Message,
 } from "./reducers";
 
 export interface StoreState {
@@ -27,6 +27,7 @@ export interface StoreState {
   sync: {
     collections: SyncCollectionsData;
     items: SyncItemsData;
+    pendingCollections: PendingCollectionsData;
     general: SyncGeneralData;
 
     lastSync: Date | null;
@@ -72,7 +73,7 @@ const credentialsPersistConfig = {
 };
 
 const syncSerialize = (state: any, key: string | number) => {
-  if ((key === "collections") || (key === "items")) {
+  if ((key === "collections") || (key === "items") || (key === "pendingCollections")) {
     return state.toJS();
   }
 
@@ -80,7 +81,7 @@ const syncSerialize = (state: any, key: string | number) => {
 };
 
 const syncDeserialize = (state: any, key: string | number) => {
-  if (key === "collections") {
+  if ((key === "collections") || (key === "pendingCollections")) {
     return ImmutableMap(state);
   } else if (key === "items") {
     return ImmutableMap(state).map((items: any) => {
@@ -156,6 +157,7 @@ const reducers = combineReducers<any>({
   sync: persistReducer(syncPersistConfig, combineReducers<any>({
     collections: syncCollections,
     items: syncItems,
+    pendingCollections,
     general: syncGeneral,
 
     lastSync: lastSyncReducer,

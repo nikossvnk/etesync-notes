@@ -24,7 +24,7 @@ export function useSyncGate() {
   return null;
 }
 
-// The number of notes with local changes that were not pushed to the server yet
+// The number of notes and notebooks with local changes that were not pushed to the server yet
 export function usePendingCount() {
-  return useSelector((state: StoreState) => state.sync.items.reduce((count, items) => count + items.size, 0));
+  return useSelector((state: StoreState) => state.sync.items.reduce((count, items) => count + items.size, state.sync.pendingCollections.size));
 }
