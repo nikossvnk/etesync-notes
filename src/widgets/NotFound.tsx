@@ -1,6 +1,6 @@
-import * as React from "react";
 import { View, StyleSheet } from "react-native";
-import { Subheading, Title, useTheme } from "react-native-paper";
+import { Subheading, Title } from "react-native-paper";
+import { useTheme } from "../theme";
 
 interface PropsType {
   message?: string;

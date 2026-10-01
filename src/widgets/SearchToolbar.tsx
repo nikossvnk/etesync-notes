@@ -1,6 +1,7 @@
 import * as React from "react";
 import { I18nManager, StyleSheet, TextInput } from "react-native";
-import { Appbar, useTheme } from "react-native-paper";
+import { Appbar } from "react-native-paper";
+import { useTheme } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MenuButton from "./MenuButton";
 
@@ -12,7 +13,7 @@ type PropsType = {
 export default function SearchToolbar(props: PropsType) {
   const { value, onChangeText } = props;
   const theme = useTheme();
-  const textColor = (theme.dark && theme.mode === "adaptive") ? theme.colors.onSurface : "#000000";
+  const textColor = theme.dark ? theme.colors.onSurface : "#000000";
   const inputRef = React.useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
 
@@ -20,6 +21,7 @@ export default function SearchToolbar(props: PropsType) {
     <Appbar.Header statusBarHeight={insets.top}>
       <MenuButton />
       <Appbar.Action
+        containerColor="transparent"
         disabled
         icon="magnify"
       />
@@ -31,14 +33,14 @@ export default function SearchToolbar(props: PropsType) {
         autoFocus
         style={[styles.input, { color: textColor }]}
         placeholderTextColor={theme.colors.placeholder}
-        selectionColor={theme.colors.accent}
+        selectionColor={theme.colors.primary}
         underlineColorAndroid="transparent"
         returnKeyType="search"
         keyboardAppearance={theme.dark ? "dark" : "light"}
-        accessibilityTraits="search"
         accessibilityRole="search"
       />
       <Appbar.Action
+        containerColor="transparent"
         disabled={!value}
         icon="close"
         onPress={() => {

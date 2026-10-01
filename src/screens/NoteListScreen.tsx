@@ -99,7 +99,7 @@ function RightAction(props: RightActionPropsType) {
 
   async function refresh() {
     const syncManager = SyncManager.getManager(etebase!);
-    syncDispatch(performSync(syncManager.sync())); // not awaiting on puprose
+    syncDispatch(performSync(syncManager.sync()) as any); // not awaiting on puprose
   }
 
   useFocusEffect(React.useCallback(() => {
@@ -144,7 +144,7 @@ function RightAction(props: RightActionPropsType) {
           visible={showSortMenu}
           onDismiss={() => setShowSortMenu(false)}
           anchor={(
-            <Menu.Item icon="sort" title="Sort by"
+            <Menu.Item leadingIcon="sort" title="Sort by"
               disabled={isSyncing}
               onPress={() => {
                 setShowSortMenu(true);
@@ -162,7 +162,7 @@ function RightAction(props: RightActionPropsType) {
                   ...viewSettings,
                   sortBy: "name",
                 },
-              }));
+              }) as any);
             }}
           />
           <MenuItem icon="sort-numeric" title="Modification time"
@@ -175,7 +175,7 @@ function RightAction(props: RightActionPropsType) {
                   ...viewSettings,
                   sortBy: "mtime",
                 },
-              }));
+              }) as any);
             }}
           />
         </Menu>

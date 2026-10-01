@@ -1,5 +1,5 @@
 import * as React from "react";
-import moment from "moment";
+import { format } from "date-fns";
 import { FlatList } from "react-native";
 import { List } from "react-native-paper";
 import { useSelector } from "react-redux";
@@ -95,7 +95,7 @@ export default function NoteList(props: PropsType) {
   function renderEntry(param: { item: CachedItem & { colUid: string, uid: string } }) {
     const item = param.item;
     const name = item.meta.name!;
-    const mtime = (item.meta.mtime) ? moment(item.meta.mtime) : undefined;
+    const mtime = (item.meta.mtime) ? format(item.meta.mtime, "PPpp") : undefined;
 
     return (
       <Link
@@ -105,7 +105,7 @@ export default function NoteList(props: PropsType) {
           <List.Item
             {...props}
             title={name}
-            description={mtime?.format("llll")}
+            description={mtime}
           />
         )}
       />

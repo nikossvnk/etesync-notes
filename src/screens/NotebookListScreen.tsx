@@ -54,7 +54,7 @@ export default function NotebookListScreen(props: PropsType) {
     navigation.setOptions({
       header: (props) => <Appbar {...props} menuFallback />,
       title: notebook?.meta.name || "Notebooks",
-      headerLeft: (notebook) ? () => <PaperAppbar.BackAction onPress={() => setNotebook(undefined)} /> : undefined,
+      headerLeft: (notebook) ? () => <PaperAppbar.BackAction containerColor="transparent" onPress={() => setNotebook(undefined)} /> : undefined,
       headerRight: () => (
         <RightAction colUid={notebook?.uid} />
       ),
@@ -157,7 +157,7 @@ function RightAction(props: RightActionPropsType) {
 
   async function refresh() {
     const syncManager = SyncManager.getManager(etebase!);
-    syncDispatch(performSync(syncManager.sync())); // not awaiting on puprose
+    syncDispatch(performSync(syncManager.sync()) as any); // not awaiting on puprose
   }
 
   useFocusEffect(React.useCallback(() => {

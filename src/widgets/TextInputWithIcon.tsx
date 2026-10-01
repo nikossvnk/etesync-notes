@@ -36,6 +36,7 @@ const TextInputWithIcon = React.memo(React.forwardRef(function _TexInputWithIcon
       />
       {!disabled ? (
         <IconButton
+          containerColor="transparent"
           style={{ position: "absolute", top: 15, right: 5 }}
           icon={icon}
           accessibilityLabel={iconAccessibilityLabel}

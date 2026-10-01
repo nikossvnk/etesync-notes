@@ -4,9 +4,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import Clickable from "./Clickable";
 
-type PropsType = Omit<React.ComponentProps<typeof BaseDrawerItem>, "icon"> & {
+type PropsType = Omit<React.ComponentProps<typeof BaseDrawerItem>, "icon" | "to"> & {
   disabled?: boolean;
   icon: string;
+  to?: string;
 };
 
 export default function DrawerItem(props: PropsType) {
@@ -17,15 +18,14 @@ export default function DrawerItem(props: PropsType) {
     renderChild={(props) => (
       <BaseDrawerItem
         {...props}
-        inactiveTintColor={(disabled) ? colors.disabled : colors.text}
+        inactiveTintColor={(disabled) ? colors.disabled : colors.onSurface}
         icon={({ size }) => (
           <MaterialCommunityIcons
-            name={icon}
+            name={icon as any}
             color={(disabled) ? colors.disabled : colors.inactiveIcon}
             size={size}
           />
         )}
-        to={(disabled) ? "" : to}
         onPress={(disabled) ? () => null : onPress}
         {...rest}
       />

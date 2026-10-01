@@ -179,11 +179,11 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
 
   try {
     await persistorLoaded();
-    const beforeState = store.getState() as StoreState;
+    const beforeState = store.getState() as unknown as StoreState;
     const etebase = await credentialsSelector(beforeState);
 
     if (!etebase) {
-      return BackgroundFetch.Result.Failed;
+      return BackgroundFetch.BackgroundFetchResult.Failed;
     }
 
     const syncManager = SyncManager.getManager(etebase);
@@ -191,14 +191,14 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
     Promise.race([timeout, sync]);
     store.dispatch(performSync(sync));
 
-    const afterState = store.getState();
+    const afterState = store.getState() as unknown as StoreState;
     const receivedNewData =
       (beforeState.cache.collections !== afterState.cache.collections) ||
       (beforeState.cache.items !== afterState.cache.items);
 
-    return receivedNewData ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.NoData;
+    return receivedNewData ? BackgroundFetch.BackgroundFetchResult.NewData : BackgroundFetch.BackgroundFetchResult.NoData;
   } catch (error) {
-    return BackgroundFetch.Result.Failed;
+    return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
 

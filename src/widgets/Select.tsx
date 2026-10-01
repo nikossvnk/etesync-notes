@@ -20,7 +20,7 @@ interface PropsType<T> extends ViewProps {
 export default function Select<T = string>(inProps: React.PropsWithChildren<PropsType<T>>) {
   const { visible, anchor, options, onDismiss, noneString, active, titleAccossor, onChange, ...props } = inProps;
 
-  const getTitle = titleAccossor ?? ((item: T) => item);
+  const getTitle = titleAccossor ?? ((item: T) => String(item));
 
   return (
     <Menu

@@ -15,9 +15,9 @@ interface PropsType {
 }
 
 const routes = [
-  { key: "notes", title: "Notes", icon: "note-multiple" },
-  { key: "search", title: "Search", icon: "magnify" },
-  { key: "notebooks", title: "Notebooks", icon: "notebook-multiple" },
+  { key: "notes", title: "Notes", focusedIcon: "note-multiple" },
+  { key: "search", title: "Search", focusedIcon: "magnify" },
+  { key: "notebooks", title: "Notebooks", focusedIcon: "notebook-multiple" },
 ];
 
 export default function HomeScreen(props: PropsType) {

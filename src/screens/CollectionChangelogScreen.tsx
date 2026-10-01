@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import moment from "moment";
+import { format } from "date-fns";
 import { useSelector } from "react-redux";
 import { FlatList, View } from "react-native";
-import { Divider, Text, List, useTheme } from "react-native-paper";
+import { Divider, Text, List } from "react-native-paper";
+import { useTheme } from "../theme";
 import { useNavigation, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 
@@ -73,14 +74,14 @@ export default function CollectionChangelogScreen(props: PropsType) {
     const icon = (item.isDeleted) ? iconDeleted : iconChanged;
 
     const name = item.meta.name!;
-    const mtime = (item.meta.mtime) ? moment(item.meta.mtime) : undefined;
+    const mtime = (item.meta.mtime) ? format(item.meta.mtime, "PPpp") : undefined;
 
     return (
       <List.Item
         key={item.uid}
         left={icon}
         title={name}
-        description={mtime?.format("llll")}
+        description={mtime}
         onPress={undefined /* FIXME: Actually do something on click */}
       />
     );
@@ -126,13 +127,13 @@ function RightAction(props: { colUid: string }) {
         <AppbarAction icon="dots-vertical" accessibilityLabel="Menu" onPress={() => setShowMenu(true)} />
       )}
     >
-      <Menu.Item icon="pencil" title="Edit"
+      <Menu.Item leadingIcon="pencil" title="Edit"
         onPress={() => {
           setShowMenu(false);
           navigation.navigate("CollectionEdit", { colUid });
         }}
       />
-      <Menu.Item icon="account-multiple" title="Members"
+      <Menu.Item leadingIcon="account-multiple" title="Members"
         onPress={() => {
           setShowMenu(false);
           navigation.navigate("CollectionMembers", { colUid });

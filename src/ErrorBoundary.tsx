@@ -52,13 +52,13 @@ function SessionExpiredDialog() {
       try {
         await etebase.fetchToken();
 
-        dispatch(login(etebase));
-        dispatch(popError());
+        dispatch(login(etebase) as any);
+        dispatch(popError() as any);
       } catch (e) {
         if (e instanceof Etebase.UnauthorizedError) {
           setFetchFailed(true);
         } else {
-          dispatch(addError(e));
+          dispatch(addError(e) as any);
         }
       }
     };
@@ -80,14 +80,14 @@ function SessionExpiredDialog() {
           const { user, serverUrl } = etebase;
           const newEtebase = await Etebase.Account.login(user.username, password, serverUrl);
 
-          dispatch(login(newEtebase));
-          dispatch(popError());
+          dispatch(login(newEtebase) as any);
+          dispatch(popError() as any);
         } catch (e) {
           setErrorPassword(e.message);
         }
       }}
       onCancel={() => {
-        dispatch(popError());
+        dispatch(popError() as any);
       }}
     >
       <>
@@ -134,7 +134,7 @@ function ErrorBoundaryInner(props: React.PropsWithChildren<{ error: Error | unde
 
   const buttonStyle = { marginVertical: 5 };
   if (fatalErrors.count() > 0) {
-    const error = fatalErrors.last<Error>();
+    const error = fatalErrors.last() as Error;
     logger.critical(error.toString());
     const content = `${error.message}\n${error.stack}\n${logs}`;
     return (
@@ -167,7 +167,7 @@ function ErrorBoundaryInner(props: React.PropsWithChildren<{ error: Error | unde
 
   let nonFatalErrorDialog;
   if (errors.count() > 0) {
-    const error = errors.last<Error>();
+    const error = errors.last() as Error;
     if (error instanceof Etebase.UnauthorizedError) {
       nonFatalErrorDialog = (
         <SessionExpiredDialog />

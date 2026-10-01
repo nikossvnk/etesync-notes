@@ -5,7 +5,8 @@ import * as React from "react";
 import * as Etebase from "etebase";
 import { useSelector, useDispatch } from "react-redux";
 import { View } from "react-native";
-import { Avatar, List, Paragraph, useTheme } from "react-native-paper";
+import { Avatar, List, Paragraph } from "react-native-paper";
+import { useTheme } from "../theme";
 import { useNavigation, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 
@@ -103,7 +104,7 @@ export default function CollectionMembersScreen(props: PropsType) {
     await inviteMgr.invite(collection!, username, pubkey, accessLevel);
     await fetchMembers();
     setAddMemberOpen(false);
-    dispatch(pushMessage({ message: "Invitation sent", severity: "success" }));
+    dispatch(pushMessage({ message: "Invitation sent", severity: "success" }) as any);
   }
 
   if (syncGate) {
@@ -144,7 +145,7 @@ export default function CollectionMembersScreen(props: PropsType) {
               right={(props: any) => (
                 <View {...props} style={{ flexDirection: "row" }}>
                   {(member.accessLevel === Etebase.CollectionAccessLevel.ReadOnly) &&
-                    <Avatar.Icon icon="eye" size={36} color={theme.colors.text} style={{ backgroundColor: "transparent" }} />
+                    <Avatar.Icon icon="eye" size={36} color={theme.colors.onSurface} style={{ backgroundColor: "transparent" }} />
                   }
                 </View>
               )}
@@ -162,7 +163,7 @@ export default function CollectionMembersScreen(props: PropsType) {
           const memberManager = colMgr.getMemberManager(collection!);
           await memberManager.remove(revokeUser!.username);
           setRevokeUser(undefined);
-          dispatch(pushMessage({ message: "Removed member", severity: "success" }));
+          dispatch(pushMessage({ message: "Removed member", severity: "success" }) as any);
           navigation.goBack();
         }}
         onCancel={() => {

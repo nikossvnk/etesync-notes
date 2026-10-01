@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { StatusBar, Platform } from "react-native";
+import { Platform } from "react-native";
 import { Menu as PaperMenu } from "react-native-paper";
 
 export default class Menu extends React.PureComponent<React.ComponentProps<typeof PaperMenu>> {
@@ -13,7 +13,7 @@ export default class Menu extends React.PureComponent<React.ComponentProps<typeo
 
     return (
       <PaperMenu
-        statusBarHeight={(Platform.OS === "ios") ? undefined : StatusBar.currentHeight}
+        statusBarHeight={(Platform.OS === "ios") ? undefined : 0}
         {...props}
       >
         {children}

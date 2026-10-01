@@ -148,20 +148,20 @@ const cachePersistConfig = {
   migrate: createMigrate(cacheMigrations, { debug: false }),
 };
 
-const reducers = combineReducers({
+const reducers = combineReducers<any>({
   fetchCount,
   syncCount,
   syncStatus: syncStatusReducer,
   settings: persistReducer(settingsPersistConfig, settingsReducer),
   credentials: persistReducer(credentialsPersistConfig, credentials),
-  sync: persistReducer(syncPersistConfig, combineReducers({
+  sync: persistReducer(syncPersistConfig, combineReducers<any>({
     collections: syncCollections,
     items: syncItems,
     general: syncGeneral,
 
     lastSync: lastSyncReducer,
   })),
-  cache: persistReducer(cachePersistConfig, combineReducers({
+  cache: persistReducer(cachePersistConfig, combineReducers<any>({
     collections,
     items,
   })),

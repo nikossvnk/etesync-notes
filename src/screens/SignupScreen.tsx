@@ -55,10 +55,10 @@ export default React.memo(function SignupScreen() {
   const [loading, setLoading] = React.useState(false);
   const [errors, setErrors] = React.useState<FormErrors>({});
 
-  const usernameRef = React.useRef<NativeTextInput>();
-  const emailRef = React.useRef<NativeTextInput>();
-  const passwordRef = React.useRef<NativeTextInput>();
-  const serverRef = React.useRef<NativeTextInput>();
+  const usernameRef = React.useRef<NativeTextInput>(null);
+  const emailRef = React.useRef<NativeTextInput>(null);
+  const passwordRef = React.useRef<NativeTextInput>(null);
+  const serverRef = React.useRef<NativeTextInput>(null);
 
   async function onSubmit() {
     const serverUrl = showAdvanced ? server : undefined;
@@ -150,7 +150,7 @@ export default React.memo(function SignupScreen() {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            autoCompleteType="username"
+            autoComplete="username"
             autoFocus
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current!.focus()}
@@ -191,7 +191,7 @@ export default React.memo(function SignupScreen() {
 
 
           <PasswordInput
-            autoCompleteType="password"
+            autoComplete="password"
             returnKeyType={showAdvanced ? "next" : undefined}
             onSubmitEditing={() => serverRef.current?.focus()}
             ref={passwordRef}

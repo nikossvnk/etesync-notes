@@ -4,7 +4,8 @@
 import * as React from "react";
 import * as Etebase from "etebase";
 import { View, ViewProps, KeyboardAvoidingView, Platform } from "react-native";
-import { Paragraph, useTheme } from "react-native-paper";
+import { Paragraph } from "react-native-paper";
+import { useTheme } from "../theme";
 import { useNavigation, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useDebouncedCallback } from "use-debounce";
@@ -34,7 +35,7 @@ interface PropsType {
 }
 
 export default function NoteEditScreen(props: PropsType) {
-  const onSaveDoRef = React.useRef<() => void>();
+  const onSaveDoRef = React.useRef<() => void>(null);
   const [loading, setLoading] = React.useState(true);
   const [content, setContent_] = React.useState("");
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
@@ -125,15 +126,15 @@ export default function NoteEditScreen(props: PropsType) {
     }
 
     if (value) {
-      syncDispatch(setSyncItem(colUid, itemUid));
+      syncDispatch(setSyncItem(colUid, itemUid) as any);
     } else {
-      syncDispatch(unsetSyncItem(colUid, itemUid));
+      syncDispatch(unsetSyncItem(colUid, itemUid) as any);
     }
   }
 
   function setContent(content: string) {
     setChanged(true);
-    persistItem.callback(content);
+    persistItem(content);
     setContent_(content);
   }
 
@@ -170,7 +171,7 @@ export default function NoteEditScreen(props: PropsType) {
         ...viewSettings,
         lastViewMode: viewMode,
       },
-    }));
+    }) as any);
   }
 
   function onShare() {
@@ -266,25 +267,25 @@ function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, 
           <AppbarAction icon="dots-vertical" accessibilityLabel="Menu" onPress={() => setShowMenu(true)} />
         )}
       >
-        <Menu.Item icon="pencil" title="Edit Properties"
+        <Menu.Item leadingIcon="pencil" title="Edit Properties"
           onPress={() => {
             setShowMenu(false);
             onEdit();
           }}
         />
-        <Menu.Item icon="delete" title="Delete"
+        <Menu.Item leadingIcon="delete" title="Delete"
           onPress={() => {
             setShowMenu(false);
             onDelete();
           }}
         />
-        <Menu.Item icon="share" title="Move"
+        <Menu.Item leadingIcon="share" title="Move"
           onPress={() => {
             setShowMenu(false);
             onMove();
           }}
         />
-        <Menu.Item icon="content-save" title="Save"
+        <Menu.Item leadingIcon="content-save" title="Save"
           disabled={!changed}
           onPress={() => {
             setShowMenu(false);
@@ -292,7 +293,7 @@ function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, 
           }}
         />
         {(canShare()) ? (
-          <Menu.Item icon="share-variant" title="Share"
+          <Menu.Item leadingIcon="share-variant" title="Share"
             onPress={() => {
               setShowMenu(false);
               onShare();

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { GestureResponderEvent, Linking } from "react-native";
-import { NavigationAction, useLinkProps } from "@react-navigation/native";
+import { NavigationAction, useLinkBuilder, useLinkProps } from "@react-navigation/native";
 
 type ChildProps = {
   href?: string;
@@ -18,7 +18,12 @@ type PropsType = {
 
 export default function Link(props: PropsType) {
   const { to, action, external, onPress: onPressProp, renderChild } = props;
-  const linkProps = useLinkProps((!to || external) ? { to: "" } : { to, action });
+  const { buildAction } = useLinkBuilder();
+  const internal = !!to && !external;
+  const linkProps = useLinkProps({
+    href: (internal) ? to : undefined,
+    action: action ?? ((internal) ? buildAction(to!) : { type: "NOOP" }),
+  });
 
   const onPress = (
     e?: React.MouseEvent<HTMLAnchorElement, MouseEvent> | GestureResponderEvent

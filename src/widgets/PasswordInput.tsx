@@ -24,6 +24,7 @@ const PasswordInput = React.memo(React.forwardRef(function _PasswordInput(inProp
         {...props}
       />
       <IconButton
+        containerColor="transparent"
         style={{ position: "absolute", top: 15, right: 5 }}
         icon={(isPassword) ? "eye-off" : "eye"}
         accessibilityLabel={(isPassword) ? "Show password" : "Hide password"}

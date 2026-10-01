@@ -1,5 +1,4 @@
-import { Colors, DarkTheme as PaperDarkTheme, DefaultTheme as PaperLightTheme, useTheme as usePaperTheme } from "react-native-paper";
-import { Theme as PaperTheme } from "react-native-paper/lib/typescript/types";
+import { MD2Colors as Colors, MD2DarkTheme as PaperDarkTheme, MD2LightTheme as PaperLightTheme, MD2Theme as PaperTheme, useTheme as usePaperTheme } from "react-native-paper";
 import Color from "color";
 
 export interface Theme extends PaperTheme {
@@ -28,7 +27,7 @@ export const LightTheme: Theme = {
     active: Color(mainColors.accent).darken(0.4).rgb().string(),
     activeIcon: Color(mainColors.accent).darken(0.2).rgb().string(),
     activeBackground: Color(mainColors.accent).alpha(0.12).rgb().string(),
-    inactiveIcon: Color(PaperLightTheme.colors.text).alpha(0.68).rgb().string(),
+    inactiveIcon: Color(PaperLightTheme.colors.onSurface).alpha(0.68).rgb().string(),
   },
 };
 
@@ -42,7 +41,7 @@ export const DarkTheme: Theme = {
     active: Color(mainColors.accent).lighten(0.4).rgb().string(),
     activeIcon: mainColors.accent,
     activeBackground: Color(mainColors.accent).alpha(0.12).rgb().string(),
-    inactiveIcon: Color(PaperDarkTheme.colors.text).alpha(0.68).rgb().string(),
+    inactiveIcon: Color(PaperDarkTheme.colors.onSurface).alpha(0.68).rgb().string(),
   },
 };
 

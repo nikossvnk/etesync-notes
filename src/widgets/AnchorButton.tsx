@@ -15,7 +15,7 @@ export default function AnchorButton(props: TypeProps) {
   return (
     <Button
       mode="contained"
-      color={theme.colors.accent}
+      color={theme.colors.primary}
       labelStyle={{ color: theme.colors.onAccent }}
       onPress={onPress}
       icon={(open) ? "menu-up" : "menu-down"}

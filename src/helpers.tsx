@@ -133,10 +133,10 @@ export function useAppStateCb(cb: (foreground: boolean) => void) {
   }
 
   React.useEffect(() => {
-    AppState.addEventListener("change", onChange);
+    const subscription = AppState.addEventListener("change", onChange);
 
     return () => {
-      AppState.removeEventListener("change", onChange);
+      subscription.remove();
     };
   }, [cb]);
 

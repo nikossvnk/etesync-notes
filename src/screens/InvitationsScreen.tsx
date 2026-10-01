@@ -79,8 +79,8 @@ export default function InvitationsScreen() {
                   title={`Invitation ${invite.fromUsername}`}
                   right={() => (
                     <>
-                      <IconButton icon="close" onPress={() => { reject(invite) }} />
-                      <IconButton icon="check" onPress={() => { setChosenInvitation(invite) }} />
+                      <IconButton containerColor="transparent" icon="close" onPress={() => { reject(invite) }} />
+                      <IconButton containerColor="transparent" icon="check" onPress={() => { setChosenInvitation(invite) }} />
                     </>
                   )}
                 />

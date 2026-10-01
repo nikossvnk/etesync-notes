@@ -3,7 +3,7 @@
 
 import { createStore, applyMiddleware } from "redux";
 import { persistStore } from "redux-persist";
-import thunkMiddleware from "redux-thunk";
+import { thunk as thunkMiddleware } from "redux-thunk";
 import { createLogger } from "redux-logger";
 import { useDispatch } from "react-redux";
 import { ActionMeta } from "redux-actions";
@@ -65,7 +65,7 @@ if (__DEV__) {
 
 // FIXME: Hack, we don't actually return a promise when one is not passed.
 export function asyncDispatch<T, V>(action: ActionMeta<Promise<T> | T, V>): Promise<ActionMeta<T, V>> {
-  return store.dispatch(action) as any;
+  return store.dispatch(action as any) as any;
 }
 
 export function useAsyncDispatch() {
@@ -76,8 +76,8 @@ export function useAsyncDispatch() {
 }
 
 export const store = createStore(
-  reducers,
-  applyMiddleware(...middleware)
+  reducers as any,
+  applyMiddleware(...(middleware as any[]))
 );
 
 export const persistor = persistStore(store, { manualPersist: true } as any);

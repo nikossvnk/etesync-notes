@@ -47,7 +47,7 @@ export default React.memo(function RootNavigator() {
     if (etebase) {
       // FIXME: We should only sync when moving to foreground if haven't in X minutes
       const syncManager = SyncManager.getManager(etebase);
-      dispatch(performSync(syncManager.sync()));
+      dispatch(performSync(syncManager.sync()) as any);
     }
   }, [etebase]));
 
@@ -198,7 +198,7 @@ function GlobalMessages() {
   const message = useSelector((state: StoreState) => state.messages.first(undefined));
 
   function handleClose() {
-    dispatch(popMessage());
+    dispatch(popMessage() as any);
   }
 
   // FIXME: handle severity

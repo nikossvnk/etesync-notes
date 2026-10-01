@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: © 2019 EteSync Authors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import * as React from "react";
 import { Paragraph } from "react-native-paper";
 
 import { persistor } from "../store";
@@ -23,7 +22,7 @@ export default function LogoutDialog(props: { visible: boolean, onDismiss: (logg
       visible={props.visible}
       onOk={async () => {
         // Here we log out regardless if we actually have an etesync
-        dispatch(logout(etebase));
+        dispatch(logout(etebase) as any);
 
         persistor.persist();
 

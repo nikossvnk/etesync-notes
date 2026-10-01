@@ -3,8 +3,9 @@
 
 import * as React from "react";
 import { View, ViewProps, StyleSheet } from "react-native";
-import { Text, useTheme, TouchableRipple } from "react-native-paper";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Text, TouchableRipple } from "react-native-paper";
+import { useTheme } from "../theme";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Link from "./Link";
 
 type PropsType = ViewProps & {
@@ -27,7 +28,7 @@ export default function Alert(props_: React.PropsWithChildren<PropsType>) {
 
   return (
     <View style={[styles.root, stylesColor[severity], style]}>
-      <Icon name={icons[severity]} style={[styles.icon, stylesIcon[severity]]} size={24} />
+      <MaterialCommunityIcons name={icons[severity] as any} style={[styles.icon, stylesIcon[severity]]} size={24} />
       {(to) ? (
         <Link
           to={to}

@@ -34,7 +34,7 @@ const menuItems: MenuItem[] = [
   {
     title: "Settings",
     path: "Settings",
-    icon: "settings",
+    icon: "cog",
     link: "/settings",
   },
 ];
@@ -113,7 +113,7 @@ export default function Drawer(props: PropsType) {
     <>
       <ScrollView style={{ flex: 1 }}>
         <SafeAreaView style={{ backgroundColor: "#424242" }}>
-          <View style={{ height: StatusBar.currentHeight }} />
+          <View style={{ height: StatusBar.currentHeight || 0 }} />
           <Container style={{ backgroundColor: "transparent" }}>
             <Image
               style={{ width: 48, height: 48, marginBottom: 15 }}
@@ -132,7 +132,7 @@ export default function Drawer(props: PropsType) {
               to="/"
               onPress={() => {
                 navigation.closeDrawer();
-                navigation.navigate("Home");
+                (navigation as any).navigate("Root", { screen: "Home" });
               }}
               icon="note-multiple"
             />
@@ -147,7 +147,7 @@ export default function Drawer(props: PropsType) {
               to={menuItem.link}
               onPress={() => {
                 navigation.closeDrawer();
-                navigation.navigate(menuItem.path);
+                (navigation as any).navigate("Root", { screen: menuItem.path });
               }}
               icon={menuItem.icon}
             />
@@ -166,7 +166,7 @@ export default function Drawer(props: PropsType) {
                 to="/invitations"
                 onPress={() => {
                   navigation.closeDrawer();
-                  navigation.navigate("Invitations");
+                  (navigation as any).navigate("Root", { screen: "Invitations" });
                 }}
                 icon="email-outline"
               />

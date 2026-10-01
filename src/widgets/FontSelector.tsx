@@ -38,8 +38,8 @@ export default function FontSelector(inProps: React.PropsWithChildren<PropsType>
       )}
       {...props}
     >
-      {Object.keys(prettyName).map((font, idx) => (
-        <MenuItem key={idx} onPress={() => onChange(font as FontFamilyKey)} title={prettyName[font]} titleStyle={{ fontFamily: fontFamilies[font] }} active={font === selected} />
+      {(Object.keys(prettyName) as FontFamilyKey[]).map((font, idx) => (
+        <MenuItem key={idx} onPress={() => onChange(font)} title={prettyName[font]} titleStyle={{ fontFamily: fontFamilies[font] }} active={font === selected} />
       ))}
     </Menu>
   );

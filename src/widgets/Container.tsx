@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { ViewProps, View } from "react-native";
-import { useTheme } from "react-native-paper";
+import { useTheme } from "../theme";
 
 export default function Container(inProps: React.PropsWithChildren<ViewProps>) {
   const { style, ...props } = inProps;

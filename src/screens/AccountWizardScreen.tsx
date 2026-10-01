@@ -108,7 +108,7 @@ export default function AccountWizardScreen() {
       try {
         await sync;
 
-        const cachedCollection = store.getState().cache.collections;
+        const cachedCollection = (store.getState() as any).cache.collections;
         // XXX new account - though should change test to see if there are any PIM types
         if (cachedCollection.size > 0) {
           setRanWizard(true);
@@ -119,7 +119,7 @@ export default function AccountWizardScreen() {
       setLoading(false);
 
       return true;
-    })()));
+    })()) as any);
   }, [etebase, tryCount]);
 
   React.useEffect(() => {

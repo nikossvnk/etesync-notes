@@ -80,7 +80,10 @@ function InnerApp() {
           <NavigationContainer linking={linking}>
             <DrawerNavigation.Navigator
               drawerContent={({ navigation }) => <Drawer navigation={navigation} />}
-              drawerStyle={initRender ? { width: 0 } : null}
+              screenOptions={{
+                headerShown: false,
+                drawerStyle: initRender ? { width: 0 } : undefined,
+              }}
             >
               <DrawerNavigation.Screen name="Root" component={RootNavigator} />
             </DrawerNavigation.Navigator>

@@ -3,7 +3,8 @@
 
 import * as React from "react";
 import { Linking, StyleSheet, View, ViewProps } from "react-native";
-import { Checkbox, DefaultTheme, useTheme } from "react-native-paper";
+import { Checkbox } from "react-native-paper";
+import { Theme, useTheme } from "../../theme";
 import MarkdownDisplay, { MarkdownIt, renderRules, RenderRules } from "react-native-markdown-display";
 import { useSelector } from "react-redux";
 import { fontFamilies, FontFamilyKey } from "../../helpers";
@@ -11,7 +12,7 @@ import { StoreState } from "../../store";
 import TaskList from "./markdown-it-tasklist";
 import toggleCheckbox from "./toggle-checkbox";
 
-const getStyles = (theme: typeof DefaultTheme, fontSize: number, fontFamilyKey: FontFamilyKey) => {
+const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey) => {
   const defaults = {
     header: {
       fontWeight: "bold",
@@ -35,7 +36,7 @@ const getStyles = (theme: typeof DefaultTheme, fontSize: number, fontFamilyKey: 
 
   return StyleSheet.create({
     body: {
-      color: theme.colors.text,
+      color: theme.colors.onSurface,
       fontSize,
       fontFamily: fontFamilies[fontFamilyKey],
     },
@@ -161,10 +162,9 @@ const getRules = (content: string, setContent: (value: string) => void): RenderR
             key={node.key}
             style={styles.tasklistItem}
           >
-            <Checkbox.Android
+            <Checkbox
               status={node.attributes.checked === "true" ? "checked" : "unchecked"}
               onPress={() => toggleCheckbox(content, node.attributes.startline, node.attributes.endline, setContent)}
-              accessible={false}
             />
             <View style={styles._VIEW_SAFE_bullet_list_content}>{children}</View>
           </View>

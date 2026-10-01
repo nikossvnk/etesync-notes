@@ -30,7 +30,7 @@ function DarkModePreferenceSelector() {
   const dispatch = useDispatch();
   const [selectDarkModeOpen, setDarkModePreferenceOpen] = React.useState(false);
   const darkModePreference = useSelector((state: StoreState) => state.settings.theme);
-  const prettyName = {
+  const prettyName: { [key: string]: string } = {
     auto: "Auto",
     dark: "Dark",
     light: "Light",
@@ -54,7 +54,7 @@ function DarkModePreferenceSelector() {
             if (selected === darkModePreference) {
               return;
             }
-            dispatch(setSettings({ theme: selected as typeof darkModePreference }));
+            dispatch(setSettings({ theme: selected as typeof darkModePreference }) as any);
           }}
           anchor={(
             <AnchorButton
@@ -74,7 +74,7 @@ function FontSizePreferenceSelector() {
   const dispatch = useDispatch();
   const [selectFontSizeOpen, setFontSizePreferenceOpen] = React.useState(false);
   const fontSizePreference = useSelector((state: StoreState) => state.settings.fontSize);
-  const prettyName = {
+  const prettyName: { [key: string]: string } = {
     8: "Extra Small",
     12: "Small",
     16: "Medium",
@@ -101,7 +101,7 @@ function FontSizePreferenceSelector() {
             if (selected === fontSizePreference) {
               return;
             }
-            dispatch(setSettings({ fontSize: selected as typeof fontSizePreference }));
+            dispatch(setSettings({ fontSize: selected as typeof fontSizePreference }) as any);
           }}
           anchor={(
             <AnchorButton
@@ -145,7 +145,7 @@ function EditorFontFamilyPreferenceSelector() {
                 ...viewSettings,
                 editorFontFamily: selected,
               },
-            }));
+            }) as any);
           }}
         />
       }
@@ -181,7 +181,7 @@ function ViewerFontFamilyPreferenceSelector() {
                 ...viewSettings,
                 viewerFontFamily: selected as typeof viewerFontFamily,
               },
-            }));
+            }) as any);
           }}
         />
       }
@@ -226,7 +226,7 @@ function ViewModePreferenceSelector() {
                 ...viewSettings,
                 defaultViewMode: selected,
               },
-            }));
+            }) as any);
           }}
           anchor={(
             <AnchorButton
@@ -268,7 +268,7 @@ const SettingsScreen = function _SettingsScreen() {
                     const url = await etebase!.getDashboardUrl();
                     Linking.openURL(url);
                   } catch (e) {
-                    dispatch(pushMessage({ message: e.message, severity: "error" }));
+                    dispatch(pushMessage({ message: e.message, severity: "error" }) as any);
                   }
                 }}
               />
@@ -307,10 +307,10 @@ const SettingsScreen = function _SettingsScreen() {
               right={(props) =>
                 <Switch
                   {...props}
-                  color={theme.colors.accent}
+                  color={theme.colors.primary}
                   value={settings.logLevel !== LogLevel.Off}
                   onValueChange={(value) => {
-                    dispatch(setSettings({ logLevel: (value) ? LogLevel.Debug : LogLevel.Off }));
+                    dispatch(setSettings({ logLevel: (value) ? LogLevel.Debug : LogLevel.Off }) as any);
                   }}
                 />
               }
@@ -329,14 +329,14 @@ const SettingsScreen = function _SettingsScreen() {
                 try {
                   const check = await Updates.checkForUpdateAsync();
                   if (check.isAvailable) {
-                    dispatch(pushMessage({ message: "Dowloading update", severity: "info" }));
+                    dispatch(pushMessage({ message: "Dowloading update", severity: "info" }) as any);
                     await Updates.fetchUpdateAsync();
                     await Updates.reloadAsync();
                   } else {
-                    dispatch(pushMessage({ message: "Already on most recent version", severity: "info" }));
+                    dispatch(pushMessage({ message: "Already on most recent version", severity: "info" }) as any);
                   }
                 } catch (e) {
-                  dispatch(pushMessage({ message: `Error: ${e.message}`, severity: "error" }));
+                  dispatch(pushMessage({ message: `Error: ${e.message}`, severity: "error" }) as any);
                 }
               }}
             />

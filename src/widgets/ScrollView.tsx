@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { ScrollViewProps, ScrollView as NativeScrollView } from "react-native";
-import { useTheme } from "react-native-paper";
+import { useTheme } from "../theme";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 export default function ScrollView(inProps: React.PropsWithChildren<ScrollViewProps> & { keyboardAware?: boolean }) {

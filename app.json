@@ -23,17 +23,17 @@
       "favicon": "./assets/favicon.png",
       "themeColor": "#ffc107"
     },
-    "sdkVersion": "39.0.0",
+    "android": {
+      "package": "com.etesync.notes",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#424242"
+      }
+    },
     "platforms": [
       "ios",
       "android",
       "web"
-    ],
-    "androidStatusBar": {
-        "translucent": true
-    },
-    "android": {
-      "package": "com.etesync.notes"
-    }
+    ]
   }
 }

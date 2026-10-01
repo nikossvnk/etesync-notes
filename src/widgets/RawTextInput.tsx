@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { TextInput } from "react-native";
-import { useTheme } from "react-native-paper";
+import { useTheme } from "../theme";
 
 export default function RawTextInput(props_: React.ComponentProps<typeof TextInput>) {
   const theme = useTheme();
@@ -11,7 +11,7 @@ export default function RawTextInput(props_: React.ComponentProps<typeof TextInp
 
   return (
     <TextInput
-      style={[{ color: theme.colors.text, backgroundColor: theme.colors.background }, style]}
+      style={[{ color: theme.colors.onSurface, backgroundColor: theme.colors.background }, style]}
       {...props}
     />
   );

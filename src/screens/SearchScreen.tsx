@@ -3,7 +3,8 @@ import * as Etebase from "etebase";
 import MiniSearch, { Options, SearchResult } from "minisearch";
 import { findAll } from "highlight-words-core";
 import { FlatList, View, Text } from "react-native";
-import { List, useTheme } from "react-native-paper";
+import { List } from "react-native-paper";
+import { useTheme } from "../theme";
 import { useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 
@@ -41,7 +42,7 @@ type HighLightProps = { children: React.ReactNode };
 function Highlight(props: HighLightProps) {
   const theme = useTheme();
   return (
-    <Text style={{ backgroundColor: theme.colors.accent, color: theme.colors.text }}>
+    <Text style={{ backgroundColor: theme.colors.primary, color: theme.colors.onSurface }}>
       {props.children}
     </Text>
   );

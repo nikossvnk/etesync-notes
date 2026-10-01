@@ -5,16 +5,13 @@ import * as React from "react";
 import { useSelector } from "react-redux";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 
-import moment from "moment";
-import "moment/locale/en-gb";
-
 import { StoreState, store } from "./store";
 import { setConnectionInfo } from "./store/actions";
 import { logger, setLogLevel } from "./logging";
 
 function handleConnectivityChange(connectionInfo: NetInfoState) {
   logger.info(`ConnectionfInfo: ${connectionInfo.isConnected} ${connectionInfo.type}`);
-  store.dispatch(setConnectionInfo({ type: connectionInfo.type, isConnected: connectionInfo.isConnected }));
+  store.dispatch(setConnectionInfo({ type: connectionInfo.type, isConnected: connectionInfo.isConnected ?? false }));
 }
 
 export default React.memo(function SettingsGate(props: React.PropsWithChildren<unknown>) {
@@ -23,10 +20,6 @@ export default React.memo(function SettingsGate(props: React.PropsWithChildren<u
   React.useEffect(() => {
     setLogLevel(settings.logLevel);
   }, [settings.logLevel]);
-
-  React.useEffect(() => {
-    moment.locale(settings.locale);
-  }, [settings.locale]);
 
   // Not really settings but the app's general state.
   React.useEffect(() => {
