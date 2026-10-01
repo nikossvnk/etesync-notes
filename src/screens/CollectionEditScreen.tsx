@@ -9,6 +9,7 @@ import { useNavigation, RouteProp, useNavigationState, CommonActions } from "@re
 import { StackNavigationProp } from "@react-navigation/stack";
 
 import { useSyncGate } from "../SyncGate";
+import { goUp } from "../navigation";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
 import { pushMessage } from "../store/actions";
@@ -124,7 +125,7 @@ export default function CollectionEditScreen(props: PropsType) {
       await saveCollectionLocally(etebase, colMgr, collection, !colUid);
       if (colUid) {
         dispatch(pushMessage({ message: "Notebook saved", severity: "success" }));
-        navigation.goBack();
+        goUp(navigation, props.route);
       } else {
         dispatch(pushMessage({ message: "Notebook created", severity: "success" }));
 
@@ -243,7 +244,7 @@ function RightAction(props: { colUid: string | undefined }) {
           deleteCollectionLocally(etebase, colMgr, collection);
           setConfirmationVisible(false);
           dispatch(pushMessage({ message: "Collection deleted", severity: "success" }));
-          navigation.navigate("Home");
+          navigation.popTo("Home");
         }}
         onCancel={() => {
           setConfirmationVisible(false);

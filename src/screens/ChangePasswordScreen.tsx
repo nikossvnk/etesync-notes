@@ -1,7 +1,7 @@
 import * as React from "react";
 import { TextInput as NativeTextInput } from "react-native";
 import { Button, HelperText } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 
 import * as Etebase from "etebase";
@@ -20,6 +20,7 @@ import PasswordInput from "../widgets/PasswordInput";
 import ScrollView from "../widgets/ScrollView";
 
 import { RootStackParamList } from "../RootStackParamList";
+import { goUp } from "../navigation";
 
 interface PasswordFormErrors {
   oldPassword?: string;
@@ -38,6 +39,7 @@ export default function ChangePasswordScreen() {
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [loading, error, setPromise] = useLoading();
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute();
 
   async function onSave() {
     setPromise(async () => {
@@ -87,7 +89,7 @@ export default function ChangePasswordScreen() {
           await etebase.changePassword(newPassword);
           dispatch(login(etebase));
           dispatch(pushMessage({ message: "Password successfully changed.", severity: "success" }));
-          navigation.goBack();
+          goUp(navigation, route);
         } catch (e) {
           setErrors({ newPassword: e.toString() });
         }

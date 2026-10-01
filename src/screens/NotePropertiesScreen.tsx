@@ -10,6 +10,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { Item } from "etebase";
 
 import { useSyncGate } from "../SyncGate";
+import { goUp } from "../navigation";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
 import { pushMessage } from "../store/actions";
@@ -145,7 +146,7 @@ export default function NotePropertiesScreen(props: PropsType) {
       await saveItemsLocally(etebase, col, itemMgr, [item]);
       if (cachedItem) {
         dispatch(pushMessage({ message: "Note properties saved", severity: "success" }));
-        navigation.goBack();
+        goUp(navigation, props.route);
       } else {
         dispatch(pushMessage({ message: "Note created", severity: "success" }));
         navigation.replace("NoteEdit", { colUid: collection!.uid, itemUid: item.uid });

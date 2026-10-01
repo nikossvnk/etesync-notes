@@ -46,6 +46,13 @@ export default function NotebookListScreen(props: PropsType) {
   const cacheCollection = (colUid) ? notebooks.find((col) => col.uid === colUid) : undefined;
   const [notebook, setNotebook] = React.useState(cacheCollection);
 
+  // Follow changes to the open notebook, and leave it when it's deleted
+  React.useEffect(() => {
+    if (notebook) {
+      setNotebook(notebooks.find((col) => col.uid === notebook.uid));
+    }
+  }, [notebooks]);
+
   React.useEffect(() => {
     if (!active) {
       return;

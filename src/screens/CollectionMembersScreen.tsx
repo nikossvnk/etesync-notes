@@ -11,6 +11,7 @@ import { useNavigation, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 
 import { useSyncGate } from "../SyncGate";
+import { goUp } from "../navigation";
 import { useCredentials } from "../credentials";
 import { StoreState } from "../store";
 import { pushMessage } from "../store/actions";
@@ -122,7 +123,7 @@ export default function CollectionMembersScreen(props: PropsType) {
       <ErrorDialog
         error={error}
         onOk={() => {
-          navigation.goBack();
+          goUp(navigation, props.route);
         }}
       />
     );
@@ -164,7 +165,7 @@ export default function CollectionMembersScreen(props: PropsType) {
           await memberManager.remove(revokeUser!.username);
           setRevokeUser(undefined);
           dispatch(pushMessage({ message: "Removed member", severity: "success" }) as any);
-          navigation.goBack();
+          goUp(navigation, props.route);
         }}
         onCancel={() => {
           setRevokeUser(undefined);

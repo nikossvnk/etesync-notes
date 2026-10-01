@@ -132,7 +132,7 @@ export default function Drawer(props: PropsType) {
               to="/"
               onPress={() => {
                 navigation.closeDrawer();
-                (navigation as any).navigate("Root", { screen: "Home" });
+                (navigation as any).navigate("Root", { screen: "Home", pop: true });
               }}
               icon="note-multiple"
             />

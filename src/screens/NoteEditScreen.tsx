@@ -11,6 +11,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { useDebouncedCallback } from "use-debounce";
 
 import { useSyncGate } from "../SyncGate";
+import { goUp } from "../navigation";
 import { StoreState, store, useAsyncDispatch } from "../store";
 import ScrollView from "../widgets/ScrollView";
 import RawTextInput from "../widgets/RawTextInput";
@@ -253,7 +254,7 @@ export default function NoteEditScreen(props: PropsType) {
           persistItem.cancel();
           dirtyRef.current = false;
           await saveItemsLocally(etebase, col, itemMgr, [item]);
-          navigation.goBack();
+          goUp(navigation, props.route);
         }}
         onCancel={() => setNoteDeleteDialogShow(false)}
       >

@@ -135,7 +135,8 @@ export default function NotePropertiesScreen(props: PropsType) {
       await saveItemsLocally(etebase, oldCol, oldItemMgr, [oldItem]);
 
       dispatch(pushMessage({ message: "Note moved", severity: "success" }));
-      navigation.navigate("NoteEdit", { colUid: collection!.uid, itemUid: newItem.uid });
+      // Show the moved note in place of the one it was moved from
+      navigation.popTo("NoteEdit", { colUid: collection!.uid, itemUid: newItem.uid });
     });
   }
 
