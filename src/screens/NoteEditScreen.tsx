@@ -11,14 +11,15 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { useDebouncedCallback } from "use-debounce";
 
 import { useSyncGate } from "../SyncGate";
-import { StoreState, useAsyncDispatch } from "../store";
+import { StoreState, store, useAsyncDispatch } from "../store";
 import ScrollView from "../widgets/ScrollView";
 import RawTextInput from "../widgets/RawTextInput";
 import { useCredentials } from "../credentials";
 
 import Markdown from "../widgets/Markdown";
 import { useSelector, useDispatch } from "react-redux";
-import { setCacheItem, itemBatch, setSettings, setSyncItem, unsetSyncItem } from "../store/actions";
+import { setCacheItem, setSettings, setSyncItem } from "../store/actions";
+import { requestSync, saveItemsLocally } from "../sync/SyncManager";
 import LoadingIndicator from "../widgets/LoadingIndicator";
 import Menu from "../widgets/Menu";
 import ConfirmationDialog from "../widgets/ConfirmationDialog";
@@ -36,6 +37,10 @@ interface PropsType {
 
 export default function NoteEditScreen(props: PropsType) {
   const onSaveDoRef = React.useRef<() => void>(null);
+  // Whether the editor has content that was not yet written to the local cache
+  const dirtyRef = React.useRef(false);
+  // The note the editor content was loaded for
+  const loadedKeyRef = React.useRef<string>(undefined);
   const [loading, setLoading] = React.useState(true);
   const [content, setContent_] = React.useState("");
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
@@ -64,22 +69,6 @@ export default function NoteEditScreen(props: PropsType) {
   }, []);
 
   React.useEffect(() => {
-    if (syncGate || !cacheItem) {
-      return;
-    }
-
-    (async () => {
-      const colMgr = etebase.getCollectionManager();
-      const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
-      const itemMgr = colMgr.getItemManager(col);
-      const item = itemMgr.cacheLoad(cacheItem.cache);
-      const content = await item.getContent(Etebase.OutputFormat.String);
-      setContent_(content);
-      setLoading(false);
-    })();
-  }, [syncGate, colUid, itemUid]);
-
-  React.useEffect(() => {
     navigation.setOptions({
       title: cacheItem?.meta.name ?? "Note Not Found",
       headerRight: () => (
@@ -97,71 +86,102 @@ export default function NoteEditScreen(props: PropsType) {
     });
   }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed]);
 
-  const persistItem = useDebouncedCallback(
-    async (content: string) => {
-      if (!etebase) {
+  // Write the content to the local cache and queue the note to be pushed to the server
+  async function saveLocally(content: string) {
+    if (!etebase) {
+      return;
+    }
+    dirtyRef.current = false;
+
+    const colMgr = etebase.getCollectionManager();
+    const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
+    const itemMgr = colMgr.getItemManager(col);
+
+    for (;;) {
+      const current = (store.getState() as unknown as StoreState).cache.items.get(colUid)?.get(itemUid);
+      if (!current) {
         return;
       }
-
-      const colMgr = etebase.getCollectionManager();
-      const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
-      const itemMgr = colMgr.getItemManager(col);
-      const item = itemMgr.cacheLoad(cacheItem!.cache);
+      const item = itemMgr.cacheLoad(current.cache);
 
       const meta = item.getMeta();
       meta.mtime = (new Date()).getTime();
       item.setMeta(meta);
       await item.setContent(content);
 
-      await dispatch(setCacheItem(col, itemMgr, item));
-    },
+      // Start over if the cached note was replaced (e.g. by a sync) while we were working on it
+      const latest = (store.getState() as unknown as StoreState).cache.items.get(colUid)?.get(itemUid);
+      if (latest === current) {
+        await dispatch(setCacheItem(col, itemMgr, item));
+        syncDispatch(setSyncItem(colUid, itemUid) as any);
+        return;
+      }
+    }
+  }
+
+  const persistItem = useDebouncedCallback(
+    saveLocally,
     1000,
     // The max wait time:
     { maxWait: 10000 }
   );
 
-  function setChanged(value: boolean) {
-    if (changed === value) {
-      return;
+  const cache = cacheItem?.cache;
+  React.useEffect(() => {
+    if (syncGate || !cacheItem) {
+      return undefined;
     }
 
-    if (value) {
-      syncDispatch(setSyncItem(colUid, itemUid) as any);
-    } else {
-      syncDispatch(unsetSyncItem(colUid, itemUid) as any);
+    const key = `${colUid}/${itemUid}`;
+    // The cached note changes when we save it ourselves and when a sync updates it.
+    // Only reload it when there is nothing local that would be lost.
+    if ((loadedKeyRef.current === key) && (changed || dirtyRef.current)) {
+      return undefined;
     }
-  }
+
+    let cancelled = false;
+    (async () => {
+      const colMgr = etebase.getCollectionManager();
+      const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
+      const itemMgr = colMgr.getItemManager(col);
+      const item = itemMgr.cacheLoad(cacheItem.cache);
+      const content = await item.getContent(Etebase.OutputFormat.String);
+      if (cancelled || ((loadedKeyRef.current === key) && dirtyRef.current)) {
+        return;
+      }
+      loadedKeyRef.current = key;
+      setContent_(content);
+      setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [syncGate, colUid, itemUid, cache]);
 
   function setContent(content: string) {
-    setChanged(true);
+    dirtyRef.current = true;
+    if (!changed) {
+      syncDispatch(setSyncItem(colUid, itemUid) as any);
+    }
     persistItem(content);
     setContent_(content);
   }
 
   async function onSaveDo() {
-    if (!changed) {
-      return;
+    persistItem.cancel();
+    if (dirtyRef.current) {
+      await saveLocally(content);
     }
-
-    const colMgr = etebase.getCollectionManager();
-    const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
-    const itemMgr = colMgr.getItemManager(col);
-    const item = itemMgr.cacheLoad(cacheItem!.cache);
-    await item.setContent(content);
-    await dispatch(itemBatch(col, itemMgr, [item]));
-    setChanged(false);
+    if (etebase) {
+      requestSync(etebase, true);
+    }
   }
 
   onSaveDoRef.current = onSaveDo;
 
-  async function onSave() {
-    setLoading(true);
-    try {
-      await onSaveDo();
-      setChanged(false);
-    } finally {
-      setLoading(false);
-    }
+  function onSave() {
+    onSaveDo();
   }
 
   function setLastViewMode(viewMode: boolean) {
@@ -230,7 +250,9 @@ export default function NoteEditScreen(props: PropsType) {
           item.setMeta(meta);
           item.delete(true);
 
-          await dispatch(itemBatch(col, itemMgr, [item]));
+          persistItem.cancel();
+          dirtyRef.current = false;
+          await saveItemsLocally(etebase, col, itemMgr, [item]);
           navigation.goBack();
         }}
         onCancel={() => setNoteDeleteDialogShow(false)}

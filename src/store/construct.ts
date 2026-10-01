@@ -5,7 +5,6 @@
 import * as Etebase from "etebase";
 
 import AsyncStorage from "../AsyncStorage";
-import { NetInfoStateType } from "@react-native-community/netinfo";
 
 import { combineReducers } from "redux";
 import { persistReducer, createTransform, createMigrate } from "redux-persist";
@@ -15,7 +14,7 @@ import { List, Map as ImmutableMap } from "immutable";
 import {
   SettingsType,
   fetchCount, syncCount, credentials, settingsReducer, syncStatusReducer, lastSyncReducer, connectionReducer, errorsReducer,
-  CredentialsData, SyncCollectionsData, SyncGeneralData,
+  CredentialsData, SyncCollectionsData, SyncGeneralData, ConnectionInfo,
   collections, items, syncCollections, syncItems, syncGeneral, CachedCollectionsData, CachedItemsData, SyncItemsData, messagesReducer, Message,
 } from "./reducers";
 
@@ -36,7 +35,7 @@ export interface StoreState {
     collections: CachedCollectionsData;
     items: CachedItemsData;
   };
-  connection: NetInfoStateType | null;
+  connection: ConnectionInfo | null;
   errors: List<Error>;
   messages: List<Message>;
 }

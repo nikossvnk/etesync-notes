@@ -11,7 +11,8 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
-import { itemBatch, pushMessage } from "../store/actions";
+import { pushMessage } from "../store/actions";
+import { saveItemsLocally } from "../sync/SyncManager";
 import { CachedItem } from "../store/reducers";
 
 import ScrollView from "../widgets/ScrollView";
@@ -127,11 +128,11 @@ export default function NotePropertiesScreen(props: PropsType) {
       meta.mtime = (new Date()).getTime();
       const content = await oldItem.getContent();
       const newItem = await newItemMgr.create(meta, content);
-      await dispatch(itemBatch(newCol, newItemMgr, [newItem]));
+      await saveItemsLocally(etebase, newCol, newItemMgr, [newItem]);
 
       oldItem.setMeta(meta);
       oldItem.delete(true);
-      await dispatch(itemBatch(oldCol, oldItemMgr, [oldItem]));
+      await saveItemsLocally(etebase, oldCol, oldItemMgr, [oldItem]);
 
       dispatch(pushMessage({ message: "Note moved", severity: "success" }));
       navigation.navigate("NoteEdit", { colUid: collection!.uid, itemUid: newItem.uid });

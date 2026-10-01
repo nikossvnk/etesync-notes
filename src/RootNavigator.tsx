@@ -4,9 +4,10 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createStackNavigator } from "@react-navigation/stack";
+import { Platform } from "react-native";
 import { Snackbar } from "react-native-paper";
 
-import { SyncManager } from "./sync/SyncManager";
+import { SyncManager, requestSync } from "./sync/SyncManager";
 
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
@@ -50,6 +51,25 @@ export default React.memo(function RootNavigator() {
       dispatch(performSync(syncManager.sync()) as any);
     }
   }, [etebase]));
+
+  // Sync when the connection comes back, so changes made offline are pushed
+  const isConnected = useSelector((state: StoreState) => state.connection?.isConnected);
+  React.useEffect(() => {
+    if (etebase && isConnected) {
+      requestSync(etebase);
+    }
+  }, [etebase, isConnected]);
+
+  // On the web NetInfo doesn't reliably report going back online, so listen to the browser directly
+  React.useEffect(() => {
+    if (!etebase || (Platform.OS !== "web")) {
+      return undefined;
+    }
+
+    const onOnline = () => requestSync(etebase);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [etebase]);
 
   return (
     <>

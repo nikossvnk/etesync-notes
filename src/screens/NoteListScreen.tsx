@@ -7,7 +7,7 @@ import { FAB } from "react-native-paper";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
 
-import { useSyncGate } from "../SyncGate";
+import { useSyncGate, usePendingCount } from "../SyncGate";
 import { StoreState } from "../store";
 import { SyncManager } from "../sync/SyncManager";
 import { performSync, setSettings } from "../store/actions";
@@ -88,6 +88,7 @@ function RightAction(props: RightActionPropsType) {
   const [showSortMenu, setShowSortMenu_] = React.useState(false);
   const syncDispatch = useDispatch();
   const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
+  const pendingCount = usePendingCount();
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const navigation = useNavigation<DefaultNavigationProp>();
   const { colUid } = props;
@@ -126,7 +127,9 @@ function RightAction(props: RightActionPropsType) {
 
   return (
     <View style={{ flexDirection: "row" }}>
-      <AppbarAction icon="sync" accessibilityLabel="Sync"
+      <AppbarAction
+        icon={(pendingCount > 0) ? "cloud-upload-outline" : "sync"}
+        accessibilityLabel={(pendingCount > 0) ? `Sync (${pendingCount} not uploaded yet)` : "Sync"}
         disabled={isSyncing}
         onPress={() => {
           setShowMenu(false);

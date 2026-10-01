@@ -9,7 +9,8 @@ import * as TaskManager from "expo-task-manager";
 import { store, persistor, StoreState, asyncDispatch } from "../store";
 
 import { credentialsSelector } from "../credentials";
-import { setSyncCollection, setSyncGeneral, setCacheCollection, unsetCacheCollection, setCacheItemMulti, addError, performSync, itemBatch, setSyncStatus } from "../store/actions";
+import { setSyncCollection, setSyncGeneral, setCacheCollection, unsetCacheCollection, setCacheItem, setCacheItemMulti, setSyncItem, unsetSyncItem, addError, performSync, pushMessage, setSyncStatus } from "../store/actions";
+import { CachedItem } from "../store/reducers";
 import * as C from "../constants";
 import { startTask, arrayToChunkIterator } from "../helpers";
 
@@ -35,6 +36,8 @@ export class SyncManager {
 
   protected etebase: Etebase.Account;
   protected isSyncing: boolean;
+  // Set when a sync was requested (or became needed) while another one was running
+  protected resyncNeeded = false;
 
   private async fetchCollection(col: Etebase.Collection) {
     const storeState = store.getState() as unknown as StoreState;
@@ -49,7 +52,14 @@ export class SyncManager {
     let done = false;
     while (!done) {
       const items = await itemMgr.list({ stoken, limit });
-      store.dispatch(setCacheItemMulti(col.uid, itemMgr, items.data));
+      // Never overwrite items that have local changes waiting to be pushed.
+      // The next push will detect the conflict and resolve it.
+      const pending = (store.getState() as unknown as StoreState).sync.items.get(col.uid);
+      const data = (pending) ? items.data.filter((item) => !pending.has(item.uid)) : items.data;
+      if (data.length !== items.data.length) {
+        this.resyncNeeded = true;
+      }
+      store.dispatch(setCacheItemMulti(col.uid, itemMgr, data));
       done = items.done;
       stoken = items.stoken;
     }
@@ -96,6 +106,83 @@ export class SyncManager {
     return true;
   }
 
+  public markLocalChanges() {
+    if (this.isSyncing) {
+      this.resyncNeeded = true;
+    }
+  }
+
+  private getCachedItem(colUid: string, itemUid: string) {
+    const storeState = store.getState() as unknown as StoreState;
+    return storeState.cache.items.get(colUid)?.get(itemUid);
+  }
+
+  // Called after an item was uploaded. "uploadedFrom" is the cache entry the uploaded item was loaded from.
+  private async markPushed(col: Etebase.Collection, itemMgr: Etebase.ItemManager, item: Etebase.Item, uploadedFrom: CachedItem) {
+    let current = this.getCachedItem(col.uid, item.uid);
+    if (current === uploadedFrom) {
+      await asyncDispatch(setCacheItem(col, itemMgr, item));
+      store.dispatch(unsetSyncItem(col.uid, item.uid));
+      return;
+    }
+
+    // The item was changed locally while we were uploading it. Reapply the local
+    // changes on top of the uploaded revision and leave it queued for the next push.
+    while (current) {
+      const newer = itemMgr.cacheLoad(current.cache);
+      item.setMeta(newer.getMeta());
+      await item.setContent(await newer.getContent());
+      if (newer.isDeleted) {
+        item.delete(true);
+      }
+
+      const latest = this.getCachedItem(col.uid, item.uid);
+      if (latest === current) {
+        break;
+      }
+      current = latest;
+    }
+    await asyncDispatch(setCacheItem(col, itemMgr, item));
+    this.resyncNeeded = true;
+  }
+
+  // The item was changed both locally and on the server. Keep both: the server version
+  // stays as the note, and the local version is saved next to it as a conflict copy.
+  private async resolveConflict(col: Etebase.Collection, itemMgr: Etebase.ItemManager, itemUid: string) {
+    const cached = this.getCachedItem(col.uid, itemUid);
+    const remote = await itemMgr.fetch(itemUid);
+
+    if (cached) {
+      const local = itemMgr.cacheLoad(cached.cache);
+      const localMeta = local.getMeta();
+      const localContent = await local.getContent(Etebase.OutputFormat.String);
+
+      let identical = local.isDeleted === remote.isDeleted;
+      if (identical && !local.isDeleted) {
+        const remoteContent = await remote.getContent(Etebase.OutputFormat.String);
+        identical = (remoteContent === localContent) && (remote.getMeta().name === localMeta.name);
+      }
+
+      // A local deletion never wins over a change made elsewhere, the note is just restored.
+      if (!identical && !local.isDeleted) {
+        const copy = await itemMgr.create({
+          ...localMeta,
+          name: `${localMeta.name} (conflict copy)`,
+          mtime: (new Date()).getTime(),
+        }, localContent);
+        await itemMgr.batch([copy]);
+        await asyncDispatch(setCacheItem(col, itemMgr, copy));
+        store.dispatch(pushMessage({
+          message: `"${localMeta.name}" was also changed elsewhere. Your version was saved as "${localMeta.name} (conflict copy)".`,
+          severity: "warning",
+        }));
+      }
+    }
+
+    await asyncDispatch(setCacheItem(col, itemMgr, remote));
+    store.dispatch(unsetSyncItem(col.uid, itemUid));
+  }
+
   private async pushAll() {
     const storeState = store.getState() as unknown as StoreState;
     const etebase = (await credentialsSelector(storeState))!;
@@ -104,17 +191,51 @@ export class SyncManager {
     const syncItemsAll = storeState.sync.items;
 
     for (const [colUid, syncItems] of syncItemsAll.entries()) {
+      const cacheCollection = cacheCollections.get(colUid);
       for (const chunk of arrayToChunkIterator(Array.from(syncItems.keys()), this.BATCH_SIZE)) {
-        const colMgr = etebase.getCollectionManager();
-        const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
-        const itemMgr = colMgr.getItemManager(col);
-        const items = chunk.map((itemUid) => {
-          const cacheItem = cacheItems.get(colUid)!.get(itemUid)!;
-          const item = itemMgr.cacheLoad(cacheItem.cache);
-          return item;
-        });
+        const entries = [];
+        for (const itemUid of chunk) {
+          const cacheItem = cacheItems.get(colUid)?.get(itemUid);
+          if (cacheCollection && cacheItem) {
+            entries.push({ itemUid, cacheItem });
+          } else {
+            // The notebook or the note is not available locally anymore, nothing to push
+            store.dispatch(unsetSyncItem(colUid, itemUid));
+          }
+        }
+        if (entries.length === 0) {
+          continue;
+        }
 
-        await asyncDispatch(itemBatch(col, itemMgr, items));
+        const colMgr = etebase.getCollectionManager();
+        const col = colMgr.cacheLoad(cacheCollection!.cache);
+        const itemMgr = colMgr.getItemManager(col);
+        const items = entries.map(({ cacheItem }) => itemMgr.cacheLoad(cacheItem.cache));
+
+        try {
+          // A transaction (unlike a batch) fails if any of the items was changed on the server
+          await itemMgr.transaction(items);
+          for (let i = 0 ; i < items.length ; i++) {
+            await this.markPushed(col, itemMgr, items[i], entries[i].cacheItem);
+          }
+        } catch (e) {
+          if (!(e instanceof Etebase.ConflictError)) {
+            throw e;
+          }
+
+          // Push one by one to find out which items are conflicting
+          for (let i = 0 ; i < items.length ; i++) {
+            try {
+              await itemMgr.transaction([items[i]]);
+              await this.markPushed(col, itemMgr, items[i], entries[i].cacheItem);
+            } catch (e) {
+              if (!(e instanceof Etebase.ConflictError)) {
+                throw e;
+              }
+              await this.resolveConflict(col, itemMgr, entries[i].itemUid);
+            }
+          }
+        }
       }
     }
 
@@ -126,6 +247,7 @@ export class SyncManager {
       return false;
     }
     this.isSyncing = true;
+    this.resyncNeeded = false;
 
     try {
       store.dispatch(setSyncStatus("Pushing changes"));
@@ -151,8 +273,36 @@ export class SyncManager {
       throw e;
     } finally {
       this.isSyncing = false;
+      if (this.resyncNeeded && (store.getState() as unknown as StoreState).connection?.isConnected !== false) {
+        setTimeout(() => {
+          if (this.resyncNeeded) {
+            store.dispatch(performSync(this.sync()));
+          }
+        }, 1000);
+      }
     }
   }
+}
+
+// Sync in the background without waiting for the result.
+// Pass localChanges when there is something new to push, so that it is not
+// missed if a sync is already running.
+export function requestSync(etebase: Etebase.Account, localChanges = false) {
+  const syncManager = SyncManager.getManager(etebase);
+  if (localChanges) {
+    syncManager.markLocalChanges();
+  }
+  store.dispatch(performSync(syncManager.sync()));
+}
+
+// Save items to the local cache and queue them to be pushed to the server.
+// This always works, even when offline.
+export async function saveItemsLocally(etebase: Etebase.Account, col: Etebase.Collection, itemMgr: Etebase.ItemManager, items: Etebase.Item[]) {
+  for (const item of items) {
+    await asyncDispatch(setCacheItem(col, itemMgr, item));
+    store.dispatch(setSyncItem(col.uid, item.uid));
+  }
+  requestSync(etebase, true);
 }
 
 function persistorLoaded() {

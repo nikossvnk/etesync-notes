@@ -12,7 +12,8 @@ import { Item } from "etebase";
 import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
-import { itemBatch, pushMessage } from "../store/actions";
+import { pushMessage } from "../store/actions";
+import { saveItemsLocally } from "../sync/SyncManager";
 import { CachedItem } from "../store/reducers";
 
 import TextInput from "../widgets/TextInput";
@@ -141,7 +142,7 @@ export default function NotePropertiesScreen(props: PropsType) {
         item = await itemMgr.create(meta, "");
       }
 
-      await dispatch(itemBatch(col, itemMgr, [item]));
+      await saveItemsLocally(etebase, col, itemMgr, [item]);
       if (cachedItem) {
         dispatch(pushMessage({ message: "Note properties saved", severity: "success" }));
         navigation.goBack();
