@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { Linking, StyleSheet, View, ViewProps } from "react-native";
-import { Checkbox, Text, TouchableRipple } from "react-native-paper";
+import { Image, Linking, StyleSheet, View, ViewProps } from "react-native";
+import { ActivityIndicator, Checkbox, Text, TouchableRipple } from "react-native-paper";
 import { Theme, useTheme } from "../../theme";
 import MarkdownDisplay, { MarkdownIt, renderRules, RenderRules } from "react-native-markdown-display";
 import { useSelector } from "react-redux";
@@ -165,21 +165,92 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
 // The images that the user chose to load
 const loadedImages = new Set<string>();
 
+// Shows an image in its own size, or scaled down to the available width
+function NoteImage(props: { src: string, alt?: string }) {
+  const { src, alt } = props;
+  const [size, setSize] = React.useState<{ width: number, height: number }>();
+  const [failed, setFailed] = React.useState(false);
+  // Whether to find out the size by loading the image, when asking for the size didn't work
+  const [measure, setMeasure] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setSize(undefined);
+    setFailed(false);
+    setMeasure(false);
+    Image.getSize(src, (width, height) => {
+      if (cancelled) {
+        return;
+      }
+      if (width && height) {
+        setSize({ width, height });
+      } else {
+        setMeasure(true);
+      }
+    }, () => {
+      if (!cancelled) {
+        // Not supported for embedded images on all platforms
+        setMeasure(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  if (failed) {
+    return (
+      <Text style={{ opacity: 0.7 }}>{alt ? `${alt} (the image could not be loaded)` : "The image could not be loaded"}</Text>
+    );
+  }
+  if (!size && measure) {
+    return (
+      <Image
+        source={{ uri: src }}
+        style={{ width: 1, height: 1, opacity: 0 }}
+        onLoad={(e) => {
+          const { width, height } = (e.nativeEvent as any)?.source ?? {};
+          if (width && height) {
+            setSize({ width, height });
+          } else {
+            setFailed(true);
+          }
+        }}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  if (!size) {
+    return (
+      <ActivityIndicator style={{ alignSelf: "flex-start", margin: 12 }} />
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: src }}
+      style={{ width: "100%", maxWidth: size.width, aspectRatio: size.width / size.height }}
+      resizeMode="contain"
+      accessible={!!alt}
+      accessibilityLabel={alt}
+    />
+  );
+}
+
 interface RemoteImagePropsType {
   src: string;
   alt?: string;
   style: any;
-  render: () => React.ReactNode;
 }
 
 // Images from the internet are only loaded when asked to. Loading them tells the server
 // they are on that the note was opened, and notes can come from other people.
 function RemoteImage(props: RemoteImagePropsType) {
-  const { src, alt, style, render } = props;
+  const { src, alt, style } = props;
   const [load, setLoad] = React.useState(loadedImages.has(src));
 
   if (load) {
-    return <>{render()}</>;
+    return <NoteImage src={src} alt={alt} />;
   }
 
   const host = /^https?:\/\/([^/?#]+)/i.exec(src)?.[1] ?? src;
@@ -205,13 +276,15 @@ function RemoteImage(props: RemoteImagePropsType) {
 
 const getRules = (content: string, setContent: (value: string) => void): RenderRules => {
   return {
-    image: (node, children, parent, styles, allowedImageHandlers, defaultImageHandler) => {
-      const render = () => renderRules.image?.(node, children, parent, styles, allowedImageHandlers, defaultImageHandler) ?? null;
+    image: (node, _children, _parent, styles) => {
       const { src, alt } = node.attributes;
-      if (/^https?:/i.test(src)) {
-        return <RemoteImage key={node.key} src={src} alt={alt} style={styles.remoteImage} render={render} />;
+      // Images that are embedded in the note itself
+      if (/^data:image\/(png|gif|jpeg|webp);base64,/i.test(src)) {
+        return <NoteImage key={node.key} src={src} alt={alt} />;
       }
-      return render();
+      // Anything else is somewhere on the internet, also when it has no scheme
+      const url = (/^https?:\/\//i.test(src)) ? src : `https://${src.replace(/^\/+/, "")}`;
+      return <RemoteImage key={node.key} src={url} alt={alt} style={styles.remoteImage} />;
     },
     list_item: (node, children, parent, styles, inheritedStyles) => {
       if (node.attributes.class === "task-list-item") {
