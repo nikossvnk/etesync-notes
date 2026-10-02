@@ -20,7 +20,7 @@ import FormButton from "../widgets/FormButton";
 import { useAsyncDispatch } from "../store";
 
 import { login } from "../store/actions";
-import { enforcePasswordRules } from "../helpers";
+import { enforcePasswordRules, validateServerUrl } from "../helpers";
 
 import * as C from "../constants";
 import { useCredentials } from "../credentials";
@@ -61,7 +61,8 @@ export default React.memo(function SignupScreen() {
   const serverRef = React.useRef<NativeTextInput>(null);
 
   async function onSubmit() {
-    const serverUrl = showAdvanced ? server : undefined;
+    // The default server is used when it's left empty
+    const serverUrl = (showAdvanced && server.trim()) ? server.trim() : undefined;
 
     const errors: FormErrors = {};
     const fieldRequired = "This field is required!";
@@ -80,6 +81,11 @@ export default React.memo(function SignupScreen() {
       if (passwordRulesError) {
         errors.password = passwordRulesError;
       }
+    }
+
+    const serverError = (serverUrl) ? validateServerUrl(serverUrl) : undefined;
+    if (serverError) {
+      errors.server = serverError;
     }
 
     setErrors(errors);

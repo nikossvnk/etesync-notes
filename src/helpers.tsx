@@ -143,6 +143,26 @@ export function useAppStateCb(cb: (foreground: boolean) => void) {
   return appState;
 }
 
+// Returns what's wrong with the URL of a server, if anything.
+// Only servers on this device or the local network may be used without encryption.
+export function validateServerUrl(url: string): string | undefined {
+  const match = /^(https?):\/\/(\[[^\]]+\]|[^/:?#@\s]+)(:\d+)?([/?#]|$)/i.exec(url);
+  if (!match) {
+    return "Must be a URL like https://example.com";
+  }
+
+  const host = match[2].toLowerCase();
+  const local = (host === "localhost") || host.endsWith(".localhost") || host.endsWith(".local") || (host === "[::1]") ||
+    /^(127|10)\.\d+\.\d+\.\d+$/.test(host) ||
+    /^(192\.168|169\.254)\.\d+\.\d+$/.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(host);
+  if ((match[1].toLowerCase() !== "https") && !local) {
+    return "Has to start with https://. Only servers on the local network can be used without it.";
+  }
+
+  return undefined;
+}
+
 export const PASSWORD_MIN_LENGTH = 8;
 
 export function enforcePasswordRules(password: string): string | undefined {

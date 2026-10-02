@@ -7,6 +7,7 @@ import * as Etebase from "etebase";
 
 import { ConnectionInfo, SettingsType } from "./";
 import { Message, PendingCollection } from "./reducers";
+import { getOrCreateSessionKey } from "../sessionKey";
 
 type FunctionAny = (...args: any[]) => any;
 
@@ -21,7 +22,7 @@ function createAction<Func extends FunctionAny, MetaFunc extends FunctionAny>(
 export const login = createAction(
   "LOGIN",
   async (etebase: Etebase.Account) => {
-    return etebase.save();
+    return etebase.save(await getOrCreateSessionKey());
   }
 );
 

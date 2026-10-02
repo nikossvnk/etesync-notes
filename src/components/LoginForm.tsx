@@ -14,6 +14,7 @@ import TextInput from "../widgets/TextInput";
 import * as C from "../constants";
 import PasswordInput from "../widgets/PasswordInput";
 import FormButton from "../widgets/FormButton";
+import { validateServerUrl } from "../helpers";
 
 interface FormErrors {
   username?: string;
@@ -40,7 +41,8 @@ export default function LoginForm(props: PropsType) {
   const serverRef = React.useRef<NativeTextInput>(null);
 
   function onSubmit() {
-    const serverUrl = showAdvanced ? server : undefined;
+    // The default server is used when it's left empty
+    const serverUrl = (showAdvanced && server.trim()) ? server.trim() : undefined;
 
     const errors: FormErrors = {};
     const fieldRequired = "This field is required!";
@@ -51,6 +53,11 @@ export default function LoginForm(props: PropsType) {
     }
     if (!password) {
       errors.password = fieldRequired;
+    }
+
+    const serverError = (serverUrl) ? validateServerUrl(serverUrl) : undefined;
+    if (serverError) {
+      errors.server = serverError;
     }
 
     setErrors(errors);

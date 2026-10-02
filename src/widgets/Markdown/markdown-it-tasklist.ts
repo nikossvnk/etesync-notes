@@ -5,8 +5,7 @@
 //
 // https://github.com/blog/1375-task-lists-in-gfm-issues-pulls-comments
 // https://github.com/blog/1825-task-lists-in-all-markdown-documents
-import MarkdownIt from "markdown-it";
-import Token from "markdown-it/lib/token";
+import type { PluginSimple, Token } from "markdown-it";
 
 function attrSet(token: Token, name: string, value: string) {
   const index = token.attrIndex(name);
@@ -56,7 +55,7 @@ function isTodoItem(tokens: Token[], index: number) {
   );
 }
 
-const markdownItTasklist: MarkdownIt.PluginSimple = function (md) {
+const markdownItTasklist: PluginSimple = function (md) {
   md.core.ruler.after("inline", "gfm-tasklists", function (state) {
     const tokens = state.tokens;
     for (let i = 2; i < tokens.length; i++) {
