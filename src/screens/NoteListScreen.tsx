@@ -14,6 +14,7 @@ import { performSync, setSettings } from "../store/actions";
 import { useCredentials } from "../credentials";
 
 import NoteList from "../components/NoteList";
+import NotebookFilter from "../components/NotebookFilter";
 import Appbar from "../widgets/Appbar";
 import Menu from "../widgets/Menu";
 import MenuItem from "../widgets/MenuItem";
@@ -28,6 +29,11 @@ interface PropsType {
 export default function NoteListScreen(props: PropsType) {
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const { sortBy } = viewSettings;
+  // Show all of the notes if the notebook that was filtered by is gone
+  const filterBy = useSelector((state: StoreState) => (
+    (viewSettings.filterBy && state.cache.collections.has(viewSettings.filterBy)) ? viewSettings.filterBy : undefined
+  ));
+  const dispatch = useDispatch();
   const navigation = useNavigation<DefaultNavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
@@ -54,7 +60,19 @@ export default function NoteListScreen(props: PropsType) {
 
   return (
     <>
+      <NotebookFilter
+        value={filterBy}
+        onChange={(colUid) => {
+          dispatch(setSettings({
+            viewSettings: {
+              ...viewSettings,
+              filterBy: colUid ?? null,
+            },
+          }) as any);
+        }}
+      />
       <NoteList
+        colUid={filterBy}
         sortBy={sortBy}
       />
 
@@ -63,7 +81,7 @@ export default function NoteListScreen(props: PropsType) {
         accessibilityLabel="New"
         color={theme.colors.onAccent}
         style={styles.fab}
-        onPress={() => navigation.navigate("NoteCreate")}
+        onPress={() => navigation.navigate("NoteCreate", (filterBy) ? { colUid: filterBy } : undefined)}
       />
     </>
   );
