@@ -22,6 +22,8 @@ concurrency:
 jobs:
   android:
     runs-on: ubuntu-latest
+    # A build takes around half an hour, don't keep going for hours when it hangs
+    timeout-minutes: 90
     permissions:
       # To create the release
       contents: write
