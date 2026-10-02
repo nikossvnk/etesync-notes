@@ -1,6 +1,16 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 1.8.0
+* Notes and notebooks are stored on the device: the app works offline and syncs when the connection is back
+* When a note was changed in two places both versions are kept
+* Show the notes as cards with a preview, and filter them by notebook
+* The back button always goes one level up
+* Encrypt the saved login session, and don't include the app's data in backups
+* Only accept servers without https on the local network
+* Images from the internet in notes are only loaded when tapped
+* Upgrade to Expo SDK 57 / React Native 0.86
+
 ## Version 1.7.0
 * A lot of cosmetic improvements
 * Web: Do heavy cryptographic operations in a web worker
