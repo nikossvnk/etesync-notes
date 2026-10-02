@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Linking, StyleSheet, View, ViewProps } from "react-native";
-import { Checkbox } from "react-native-paper";
+import { Checkbox, Text, TouchableRipple } from "react-native-paper";
 import { Theme, useTheme } from "../../theme";
 import MarkdownDisplay, { MarkdownIt, renderRules, RenderRules } from "react-native-markdown-display";
 import { useSelector } from "react-redux";
@@ -138,6 +138,15 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
       borderColor: extraColors.border,
       borderRightWidth: 1,
     },
+    remoteImage: {
+      borderColor: extraColors.border,
+      borderWidth: 1,
+      borderRadius: 4,
+      borderStyle: "dashed",
+      marginVertical: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+    },
     tasklistItem: {
       display: "flex",
       flexDirection: "row",
@@ -153,8 +162,57 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
   });
 };
 
+// The images that the user chose to load
+const loadedImages = new Set<string>();
+
+interface RemoteImagePropsType {
+  src: string;
+  alt?: string;
+  style: any;
+  render: () => React.ReactNode;
+}
+
+// Images from the internet are only loaded when asked to. Loading them tells the server
+// they are on that the note was opened, and notes can come from other people.
+function RemoteImage(props: RemoteImagePropsType) {
+  const { src, alt, style, render } = props;
+  const [load, setLoad] = React.useState(loadedImages.has(src));
+
+  if (load) {
+    return <>{render()}</>;
+  }
+
+  const host = /^https?:\/\/([^/?#]+)/i.exec(src)?.[1] ?? src;
+  return (
+    <TouchableRipple
+      style={style}
+      accessibilityRole="button"
+      accessibilityLabel={`Load image from ${host}`}
+      onPress={() => {
+        loadedImages.add(src);
+        setLoad(true);
+      }}
+    >
+      <View>
+        {!!alt && (
+          <Text>{alt}</Text>
+        )}
+        <Text style={{ opacity: 0.7 }}>Tap to load image from {host}</Text>
+      </View>
+    </TouchableRipple>
+  );
+}
+
 const getRules = (content: string, setContent: (value: string) => void): RenderRules => {
   return {
+    image: (node, children, parent, styles, allowedImageHandlers, defaultImageHandler) => {
+      const render = () => renderRules.image?.(node, children, parent, styles, allowedImageHandlers, defaultImageHandler) ?? null;
+      const { src, alt } = node.attributes;
+      if (/^https?:/i.test(src)) {
+        return <RemoteImage key={node.key} src={src} alt={alt} style={styles.remoteImage} render={render} />;
+      }
+      return render();
+    },
     list_item: (node, children, parent, styles, inheritedStyles) => {
       if (node.attributes.class === "task-list-item") {
         return (
