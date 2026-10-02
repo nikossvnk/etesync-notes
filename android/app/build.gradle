@@ -93,8 +93,9 @@ android {
         applicationId 'com.etesync.notes'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.7.0"
+        // Can be set with -PappVersionCode=... and -PappVersionName=..., the release workflow does
+        versionCode((findProperty('appVersionCode') ?: 1) as int)
+        versionName(findProperty('appVersionName') ?: "1.7.0")
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -105,15 +106,26 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Only when the release key is configured, with -P... or in ~/.gradle/gradle.properties:
+        // releaseStoreFile, releaseStorePassword, releaseKeyAlias and releaseKeyPassword.
+        // The key itself is never part of the repository.
+        if (findProperty('releaseStoreFile')) {
+            release {
+                storeFile file(findProperty('releaseStoreFile'))
+                storePassword findProperty('releaseStorePassword')
+                keyAlias findProperty('releaseKeyAlias')
+                keyPassword findProperty('releaseKeyPassword')
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Signed with the debug key unless the release key is configured (see above).
+            // Builds signed with the debug key are for testing only and must not be distributed.
+            signingConfig signingConfigs.findByName('release') ?: signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
