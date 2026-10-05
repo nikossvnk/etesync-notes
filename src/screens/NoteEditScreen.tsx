@@ -19,7 +19,8 @@ import { useCredentials } from "../credentials";
 
 import Markdown from "../widgets/Markdown";
 import { useSelector, useDispatch } from "react-redux";
-import { setCacheItem, setSettings, setSyncItem } from "../store/actions";
+import { pushMessage, setCacheItem, setSettings, setSyncItem, unsetCacheItem } from "../store/actions";
+import { newNotes } from "../newNotes";
 import { requestSync, saveItemsLocally } from "../sync/SyncManager";
 import LoadingIndicator from "../widgets/LoadingIndicator";
 import Menu from "../widgets/Menu";
@@ -37,7 +38,7 @@ interface PropsType {
 }
 
 export default function NoteEditScreen(props: PropsType) {
-  const onSaveDoRef = React.useRef<() => void>(null);
+  const onLeaveRef = React.useRef<() => void>(null);
   // Whether the editor has content that was not yet written to the local cache
   const dirtyRef = React.useRef(false);
   // The note the editor content was loaded for
@@ -65,7 +66,7 @@ export default function NoteEditScreen(props: PropsType) {
 
   React.useEffect(() => {
     return () => {
-      onSaveDoRef.current?.();
+      onLeaveRef.current?.();
     };
   }, []);
 
@@ -184,7 +185,34 @@ export default function NoteEditScreen(props: PropsType) {
     }
   }
 
-  onSaveDoRef.current = onSaveDo;
+  // Called when the screen is left: saves the note, or throws it away if it was just created and is still empty
+  onLeaveRef.current = () => {
+    if (!newNotes.has(itemUid)) {
+      onSaveDo();
+      return;
+    }
+    newNotes.delete(itemUid);
+    if (content.trim() !== "") {
+      onSaveDo();
+      return;
+    }
+
+    persistItem.cancel();
+    dirtyRef.current = false;
+    if (!changed) {
+      // It was never queued to be pushed, so it only exists here
+      syncDispatch(unsetCacheItem(colUid, itemUid) as any);
+    } else if (etebase && cacheItem) {
+      // It got content that was removed again, and may already be on the server, so delete it there too
+      const colMgr = etebase.getCollectionManager();
+      const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
+      const itemMgr = colMgr.getItemManager(col);
+      const item = itemMgr.cacheLoad(cacheItem.cache);
+      item.delete(true);
+      saveItemsLocally(etebase, col, itemMgr, [item]);
+    }
+    syncDispatch(pushMessage({ message: "Empty note discarded", severity: "info" }) as any);
+  };
 
   function onSave() {
     onSaveDo();

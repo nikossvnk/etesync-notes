@@ -13,8 +13,9 @@ import { useSyncGate } from "../SyncGate";
 import { goUp } from "../navigation";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
-import { pushMessage } from "../store/actions";
+import { pushMessage, setCacheItem } from "../store/actions";
 import { saveItemsLocally } from "../sync/SyncManager";
+import { newNotes } from "../newNotes";
 import { CachedItem } from "../store/reducers";
 
 import TextInput from "../widgets/TextInput";
@@ -143,7 +144,13 @@ export default function NotePropertiesScreen(props: PropsType) {
         item = await itemMgr.create(meta, "");
       }
 
-      await saveItemsLocally(etebase, col, itemMgr, [item]);
+      if (cachedItem) {
+        await saveItemsLocally(etebase, col, itemMgr, [item]);
+      } else {
+        // Only pushed to the server once it gets content, see newNotes
+        await dispatch(setCacheItem(col, itemMgr, item));
+        newNotes.add(item.uid);
+      }
       if (cachedItem) {
         dispatch(pushMessage({ message: "Note properties saved", severity: "success" }));
         goUp(navigation, props.route);

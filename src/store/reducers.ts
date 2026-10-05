@@ -194,6 +194,13 @@ export const items = handleActions(
       }
       return state;
     },
+    [actions.unsetCacheItem.toString()]: (state: CachedItemsData, action: Action<any>) => {
+      if (action.payload !== undefined) {
+        const { colUid, itemUid } = action.payload as { colUid: string, itemUid: string };
+        return state.removeIn([colUid, itemUid]);
+      }
+      return state;
+    },
     [combineActions(
       actions.itemBatch,
       actions.setCacheItemMulti
