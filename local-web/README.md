@@ -17,9 +17,8 @@ or Node.js through nvm). With a clone of the repository, run the script, from an
 local-web/install.sh              # e.g. from the root of the repository
 ```
 
-It builds the repository it's in (the directory above it), so it has to stay in `local-web/`.
-
-It builds what the repository has (with a note when it has uncommitted changes). To update later:
+It builds the repository it's in (the directory above it, so it has to stay in `local-web/`), with a
+note when it has uncommitted changes. To update later:
 
 ```
 git pull
