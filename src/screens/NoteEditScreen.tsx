@@ -256,7 +256,7 @@ export default function NoteEditScreen(props: PropsType) {
   return (
     <>
       {viewMode ? (
-        <ScrollView keyboardAware contentContainerStyle={{ flexGrow: 1, padding: 10 }}>
+        <ScrollView keyboardAware contentContainerStyle={{ flexGrow: 1, padding: 10 }} testID="note-viewer">
           <Markdown
             setContent={setContent}
             content={content}
