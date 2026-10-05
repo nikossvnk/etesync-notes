@@ -1,6 +1,12 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 1.8.1
+* Saved notes open in the viewer, new notes in the editor
+* New notes that are left empty are thrown away
+* Images in notes are shown in their own size, and without an endless spinner
+* Images from the internet are also only loaded when tapped when their address has no scheme
+
 ## Version 1.8.0
 * Notes and notebooks are stored on the device: the app works offline and syncs when the connection is back
 * When a note was changed in two places both versions are kept
