@@ -1,0 +1,12 @@
+{
+  "name": "etesync-notes-e2e",
+  "private": true,
+  "description": "Browser tests of the web build of EteSync Notes against an Etebase test server",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "dependencies": {
+    "etebase": "0.43.1",
+    "playwright-core": "^1.63.0"
+  }
+}

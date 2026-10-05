@@ -1,0 +1,218 @@
+// Helpers for the browser tests. See README.md for how to run them.
+const { chromium } = require("playwright-core");
+const Etebase = require("etebase");
+
+const config = {
+  // The web build of the app, served by serve.js
+  appUrl: process.env.E2E_APP_URL || "http://localhost:8765",
+  // An Etebase test server, and an account on it that the tests may change (setup.js creates it)
+  serverUrl: process.env.E2E_SERVER || "http://127.0.0.1:3735",
+  username: process.env.E2E_USER || "e2e-tester",
+  password: process.env.E2E_PASSWORD || "e2e-tester-password",
+  // A Chromium binary, if Playwright's own isn't installed (npx playwright install chromium)
+  chromium: process.env.E2E_CHROMIUM || undefined,
+};
+exports.config = config;
+exports.Etebase = Etebase;
+
+exports.launch = () => chromium.launch({ executablePath: config.chromium });
+
+let failures = 0;
+// Prints the result of a check, a failed one makes the test fail (at the end, so that the others still run)
+exports.check = (label, ok, detail) => {
+  // The details are only shown when it failed
+  const shown = (!ok && (detail !== undefined)) ? `: ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : "";
+  console.log(`${ok ? "ok  " : "FAIL"} - ${label}${shown}`);
+  if (!ok) {
+    failures++;
+  }
+};
+// Runs a test: a thrown error or a failed check makes the process exit with 1
+exports.run = (fn) => {
+  fn().then(async () => {
+    process.exit(failures ? 1 : 0);
+  }, (e) => {
+    console.log("FAIL - " + e.message.split("\n").slice(0, 4).join(" / "));
+    process.exit(1);
+  });
+};
+exports.unique = () => String(Date.now() % 1000000);
+
+// Direct access to the account through the Etebase client, to prepare data and check the server's side
+exports.api = {
+  async login() {
+    return Etebase.Account.login(config.username, config.password, config.serverUrl);
+  },
+  async notebook(etebase, name) {
+    const colMgr = etebase.getCollectionManager();
+    const existing = (await colMgr.list("etebase.md.note")).data.find((x) => !x.isDeleted && x.getMeta().name === name);
+    if (existing) {
+      return existing;
+    }
+    const col = await colMgr.create("etebase.md.note", { name }, "");
+    await colMgr.upload(col);
+    return col;
+  },
+  // Adds a note (and its notebook, if needed) directly on the server
+  async addNote(notebookName, name, content) {
+    const etebase = await this.login();
+    const col = await this.notebook(etebase, notebookName);
+    const itemMgr = etebase.getCollectionManager().getItemManager(col);
+    const item = await itemMgr.create({ name, mtime: Date.now() }, content);
+    await itemMgr.batch([item]);
+    await etebase.logout();
+  },
+  // The names of all of the notes on the server ("DELETED:" in front of deleted ones)
+  async noteNames() {
+    const etebase = await this.login();
+    const colMgr = etebase.getCollectionManager();
+    const names = [];
+    for (const col of (await colMgr.list("etebase.md.note")).data) {
+      let stoken;
+      for (;;) {
+        const items = await colMgr.getItemManager(col).list({ stoken });
+        names.push(...items.data.map((it) => (it.isDeleted ? "DELETED:" : "") + it.getMeta().name));
+        stoken = items.stoken;
+        if (items.done) {
+          break;
+        }
+      }
+    }
+    await etebase.logout();
+    return names;
+  },
+};
+
+// A browser session (its own context, so like a separate device) with helpers for driving the app
+exports.session = async (browser, tag) => {
+  const ctx = await browser.newContext({ viewport: { width: 900, height: 700 } });
+  const p = await ctx.newPage();
+  p.setDefaultTimeout(10000);
+  p.on("pageerror", (e) => console.log(tag, "PAGEERROR", e.message));
+  p.on("console", (m) => {
+    if (m.type() === "error" && !/Fragment|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(m.text())) {
+      console.log(tag, "CONSOLE", m.text().slice(0, 500));
+    }
+  });
+  const vis = (s) => p.locator(s + " >> visible=true").first();
+  const btn = (re) => p.getByRole("button", { name: re }).locator("visible=true").first();
+  // The text of the page without the drawer
+  const text = async () => (await p.innerText("body")).replace(/\s+/g, " ").split("Contact developer")[1] || "";
+  const wait = (ms) => p.waitForTimeout(ms);
+  const s = { tag, ctx, p, vis, btn, text, wait };
+
+  s.login = async () => {
+    await p.goto(config.appUrl + "/"); await wait(4000);
+    await vis("text=Advanced settings").click(); await wait(500);
+    await vis('input[aria-label="Username"]').fill(config.username);
+    await vis('input[aria-label="Password"]').fill(config.password);
+    await vis('input[aria-label="Server URL"]').fill(config.serverUrl);
+    await btn(/^log in$/i).click(); await wait(8000);
+  };
+  // Opens a note or a notebook by its name
+  s.open = async (name) => { await p.getByText(name, { exact: true }).locator("visible=true").first().click(); await wait(2500); };
+  s.back = async () => { await btn(/^back$/i).click(); await wait(2000); };
+  s.dismiss = async () => {
+    const d = p.getByRole("button", { name: /^dismiss$/i }).locator("visible=true");
+    for (let i = 0; (i < 4) && (await d.count() > 0); i++) {
+      await d.first().click({ timeout: 1500 }).catch(() => {}); await wait(600);
+    }
+  };
+  s.tab = async (name) => {
+    await s.dismiss();
+    await p.getByRole("tab", { name: new RegExp(name) }).locator("visible=true").first().click(); await wait(1500);
+  };
+  s.sync = async () => { await btn(/^sync/i).click(); await wait(5000); };
+  s.has = async (str) => (await text()).includes(str);
+  s.syncLabel = () => p.evaluate(() => [...document.querySelectorAll('[aria-label^="Sync"]')].filter((e) => e.offsetParent).map((e) => e.getAttribute("aria-label")).join("|"));
+  s.shot = (name) => p.screenshot({ path: `${name}-${tag}.png` });
+
+  // Creates a note with the "New" button of the notes list, in the given notebook (or the preselected one)
+  s.createNote = async (name, notebook) => {
+    await btn(/^new$/i).click(); await wait(1500);
+    await vis('input[aria-label="Name"]').fill(name);
+    if (notebook) {
+      await vis('input[aria-label="Notebook"]').click({ force: true }); await wait(1000);
+      await p.getByText(notebook, { exact: true }).locator("visible=true").last().click({ force: true }); await wait(800);
+    }
+    await btn(/^save$/i).click(); await wait(3000);
+  };
+
+  // A saved note has to open in the viewer and show its text there
+  const norm = (str) => str.replace(/\s+/g, " ").trim();
+  s.viewerText = async () => {
+    const viewer = p.locator('[data-testid="note-viewer"] >> visible=true');
+    if (await viewer.count() === 0) {
+      throw new Error("the note did not open in the viewer");
+    }
+    return viewer.first().innerText();
+  };
+  // The text of the open note: read from the editor, after checking that the viewer showed the same text
+  s.noteText = async () => {
+    const shown = await s.viewerText();
+    await btn(/^view mode$/i).click(); await wait(800);
+    const value = await vis("textarea").inputValue();
+    if (norm(shown) !== norm(value)) {
+      throw new Error(`the viewer showed ${JSON.stringify(shown)}, but the note is ${JSON.stringify(value)}`);
+    }
+    await btn(/^view mode$/i).click(); await wait(500);
+    return value;
+  };
+  // The editor of the open note. A saved note has to be in the viewer first, showing its text,
+  // only a new (empty) note may open in the editor.
+  s.editor = async () => {
+    const textarea = p.locator("textarea >> visible=true");
+    if (await textarea.count() > 0) {
+      const value = await textarea.first().inputValue();
+      if (value !== "") {
+        throw new Error(`a saved note opened in the editor instead of the viewer: ${JSON.stringify(value)}`);
+      }
+      return vis("textarea");
+    }
+    await s.viewerText();
+    await btn(/^view mode$/i).click(); await wait(800);
+    return vis("textarea");
+  };
+
+  // Notebooks: going back to the list of notebooks, and editing one
+  s.home = async () => {
+    for (let i = 0; i < 5; i++) {
+      await s.dismiss();
+      const back = p.getByRole("button", { name: /^back$/i }).locator("visible=true");
+      if ((await back.count() === 0) || (new URL(p.url()).pathname === "/")) {
+        break;
+      }
+      await back.first().click(); await wait(1200);
+    }
+    await s.tab("Notebooks");
+    if (s.inNotebook) {
+      await btn(/^back$/i).click(); await wait(1200); s.inNotebook = false;
+    }
+  };
+  s.openNotebook = async (name) => { await s.open(name); s.inNotebook = true; };
+  s.editNotebook = async (name) => {
+    await s.home(); await s.openNotebook(name);
+    await btn(/^menu$/i).click(); await wait(800);
+    await vis('text="Manage Notebook"').click({ force: true }); await wait(1500);
+    await btn(/^menu$/i).click(); await wait(800);
+    await vis('text="Edit"').click({ force: true }); await wait(1500);
+  };
+  s.createNotebook = async (name) => {
+    await s.tab("Notebooks");
+    await btn(/^new$/i).click(); await wait(1500);
+    await p.locator('input[aria-label="Display name (title)"] >> visible=true').last().fill(name);
+    await p.getByRole("button", { name: /^save$/i }).locator("visible=true").last().click(); await wait(3000);
+  };
+  s.renameNotebook = async (from, to) => {
+    await s.editNotebook(from);
+    await vis('input[aria-label="Display name (title)"]').fill(to);
+    await btn(/^save$/i).click(); await wait(2500);
+  };
+  s.deleteNotebook = async (name) => {
+    await s.editNotebook(name);
+    await btn(/^delete collection$/i).click(); await wait(800);
+    await btn(/^ok$/i).click(); await wait(2500);
+    s.inNotebook = false; // a fresh home screen is shown after deleting
+  };
+  return s;
+};
