@@ -57,11 +57,23 @@ const settingsMigrations = {
       viewSettings,
     };
   },
+  // Open notes in the viewer by default. With "last" they opened in the editor once it was used,
+  // which was confusing. Choosing "editor" or "last" in the settings still works.
+  2: (state: any) => {
+    const viewSettings = { ...state.viewSettings };
+    if (viewSettings.defaultViewMode === "last") {
+      viewSettings.defaultViewMode = "viewer";
+    }
+    return {
+      ...state,
+      viewSettings,
+    };
+  },
 };
 
 const settingsPersistConfig = {
   key: "settings",
-  version: 1,
+  version: 2,
   storage: AsyncStorage,
   migrate: createMigrate(settingsMigrations, { debug: false }),
 };

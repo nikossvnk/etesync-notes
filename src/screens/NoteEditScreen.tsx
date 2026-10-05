@@ -150,8 +150,13 @@ export default function NoteEditScreen(props: PropsType) {
       if (cancelled || ((loadedKeyRef.current === key) && dirtyRef.current)) {
         return;
       }
+      const firstLoad = loadedKeyRef.current !== key;
       loadedKeyRef.current = key;
       setContent_(content);
+      // There is nothing to view in an empty note (e.g. one that was just created), so start writing
+      if (firstLoad && (content === "")) {
+        setViewMode(false);
+      }
       setLoading(false);
     })();
 

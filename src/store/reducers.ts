@@ -393,7 +393,7 @@ export const settingsReducer = handleActions(
     theme: "auto",
     fontSize: 16,
     viewSettings: {
-      defaultViewMode: "last",
+      defaultViewMode: "viewer",
       lastViewMode: false,
       filterBy: null,
       sortBy: "name",
