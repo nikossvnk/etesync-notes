@@ -1,6 +1,14 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 1.9.0
+* New notes open right away: the title is written in the bar at the top, and the notebook is chosen next to it (or under it on phones). This replaces the screens to edit the properties of a note and to move it
+* A note without a title is named after its first line
+* On wide screens, a sidebar with the notebooks and their notes, which can be resized and hidden
+* On wide screens, the actions are buttons in the bar instead of a menu
+* The menu shows the server the account is on
+* Links to other sites don't tell them where they came from
+
 ## Version 1.8.1
 * Saved notes open in the viewer, new notes in the editor
 * New notes that are left empty are thrown away
