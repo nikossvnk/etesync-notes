@@ -5,6 +5,7 @@ import * as React from "react";
 import { useSelector } from "react-redux";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { Image, Linking, View, StatusBar } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Divider, Drawer as PaperDrawer, Text, Paragraph } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,6 +22,7 @@ import LogoutDialog from "./components/LogoutDialog";
 
 import * as C from "./constants";
 import { useCredentials } from "./credentials";
+import { serverName } from "./helpers";
 import { RootStackParamList } from "./RootStackParamList";
 
 type MenuItem = {
@@ -120,9 +122,16 @@ export default function Drawer(props: PropsType) {
               source={require("./images/icon.png")}
             />
             <Subheading style={{ color: "white" }}>{C.appName}</Subheading>
-            {etebase &&
-              <Text style={{ color: "white" }}>{etebase.user.username}</Text>
-            }
+            {etebase && (
+              <>
+                <Text style={{ color: "white" }}>{etebase.user.username}</Text>
+                {/* The server the account is on */}
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, opacity: 0.8 }} accessibilityLabel={`Server: ${serverName(etebase.serverUrl)}`}>
+                  <MaterialCommunityIcons name="server" size={14} color="white" style={{ marginRight: 6 }} />
+                  <Text style={{ color: "white", flexShrink: 1 }} numberOfLines={1}>{serverName(etebase.serverUrl)}</Text>
+                </View>
+              </>
+            )}
           </Container>
         </SafeAreaView>
         {loggedIn && (

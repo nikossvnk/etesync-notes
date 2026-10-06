@@ -43,6 +43,8 @@ export default function Link(props: PropsType) {
           onClick={onPress}
           href={(external) ? to : linkProps.href}
           target={(external) ? "_blank" : undefined}
+          // The page that is opened gets neither the app's address nor a way back to it
+          rel={(external) ? "noreferrer" : undefined}
           style={{ textDecoration: "none" }}
         >
           {renderChild({})}

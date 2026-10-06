@@ -14,6 +14,7 @@ import { useCredentials } from "../credentials";
 import NoteList from "../components/NoteList";
 import Appbar from "../widgets/Appbar";
 import AppbarAction from "../widgets/AppbarAction";
+import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
 import Menu from "../widgets/Menu";
 import MenuItem from "../widgets/MenuItem";
 import NotFound from "../widgets/NotFound";
@@ -161,6 +162,7 @@ function RightAction(props: RightActionPropsType) {
   const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
   const pendingCount = usePendingCount();
   const navigation = useNavigation<DefaultNavigationProp>();
+  const wide = useWideAppbar();
   const { colUid } = props;
 
   async function refresh() {
@@ -201,7 +203,15 @@ function RightAction(props: RightActionPropsType) {
           refresh();
         }}
       />
-      {colUid && (
+      {colUid && wide && (
+        <AppbarButton
+          icon="notebook"
+          title="Manage Notebook"
+          disabled={isSyncing}
+          onPress={() => navigation.navigate("CollectionChangelog", { colUid })}
+        />
+      )}
+      {colUid && !wide && (
         <Menu
           visible={showMenu}
           onDismiss={() => setShowMenu(false)}

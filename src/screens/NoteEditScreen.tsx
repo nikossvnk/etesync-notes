@@ -27,6 +27,7 @@ import Menu from "../widgets/Menu";
 import ConfirmationDialog from "../widgets/ConfirmationDialog";
 import NotFound from "../widgets/NotFound";
 import AppbarAction from "../widgets/AppbarAction";
+import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
 import { fontFamilies } from "../helpers";
 import { RootStackParamList } from "../RootStackParamList";
 import { canShare, shareItem } from "../import-export";
@@ -310,6 +311,22 @@ interface RightActionViewProps {
 
 function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, onShare, changed }: RightActionViewProps) {
   const [showMenu, setShowMenu] = React.useState(false);
+  const wide = useWideAppbar();
+
+  if (wide) {
+    return (
+      <View style={{ flexDirection: "row" }}>
+        <AppbarButton icon={viewMode ? "pencil" : "eye"} title="View mode" onPress={() => setViewMode(!viewMode)} />
+        <AppbarButton icon="content-save" title="Save" disabled={!changed} onPress={onSave} />
+        <AppbarButton icon="form-textbox" title="Edit Properties" onPress={onEdit} />
+        <AppbarButton icon="folder-move-outline" title="Move" onPress={onMove} />
+        {(canShare()) ? (
+          <AppbarButton icon="share-variant" title="Share" onPress={onShare} />
+        ) : null}
+        <AppbarButton icon="delete" title="Delete" onPress={onDelete} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flexDirection: "row" }}>

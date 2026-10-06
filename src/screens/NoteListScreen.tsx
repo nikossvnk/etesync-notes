@@ -15,10 +15,12 @@ import { useCredentials } from "../credentials";
 
 import NoteList from "../components/NoteList";
 import NotebookFilter from "../components/NotebookFilter";
+import { useSidebarShown } from "../components/Sidebar";
 import Appbar from "../widgets/Appbar";
 import Menu from "../widgets/Menu";
 import MenuItem from "../widgets/MenuItem";
 import AppbarAction from "../widgets/AppbarAction";
+import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
 import { DefaultNavigationProp } from "../RootStackParamList";
 import { useTheme } from "../theme";
 
@@ -37,6 +39,8 @@ export default function NoteListScreen(props: PropsType) {
   const navigation = useNavigation<DefaultNavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
+  // The sidebar has the notebooks to choose from already
+  const sidebarShown = useSidebarShown();
 
   const { active } = props;
 
@@ -60,7 +64,7 @@ export default function NoteListScreen(props: PropsType) {
 
   return (
     <>
-      <NotebookFilter
+      {!sidebarShown && <NotebookFilter
         value={filterBy}
         onChange={(colUid) => {
           dispatch(setSettings({
@@ -70,7 +74,7 @@ export default function NoteListScreen(props: PropsType) {
             },
           }) as any);
         }}
-      />
+      />}
       <NoteList
         colUid={filterBy}
         sortBy={sortBy}
@@ -109,7 +113,21 @@ function RightAction(props: RightActionPropsType) {
   const pendingCount = usePendingCount();
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const navigation = useNavigation<DefaultNavigationProp>();
+  const wide = useWideAppbar();
+  // The notebook whose notes are listed
+  const filterBy = useSelector((state: StoreState) => (
+    (viewSettings.filterBy && state.cache.collections.has(viewSettings.filterBy)) ? viewSettings.filterBy : undefined
+  ));
   const { colUid } = props;
+
+  function setSortBy(sortBy: "name" | "mtime") {
+    syncDispatch(setSettings({
+      viewSettings: {
+        ...viewSettings,
+        sortBy,
+      },
+    }) as any);
+  }
 
   function setShowSortMenu(value: boolean) {
     setShowSortMenu_(value);
@@ -142,6 +160,35 @@ function RightAction(props: RightActionPropsType) {
     const id = setInterval(autoRefresh, interval);
     return () => clearInterval(id);
   }, [etebase]));
+
+  if (wide) {
+    // The sort order is a button that switches between the two
+    const byName = (viewSettings.sortBy === "name");
+    return (
+      <View style={{ flexDirection: "row" }}>
+        <AppbarButton
+          icon={(pendingCount > 0) ? "cloud-upload-outline" : "sync"}
+          title={(pendingCount > 0) ? `Sync (${pendingCount} not uploaded yet)` : "Sync"}
+          disabled={isSyncing}
+          onPress={refresh}
+        />
+        <AppbarButton
+          icon={(byName) ? "sort-alphabetical-ascending" : "sort-clock-descending-outline"}
+          title={(byName) ? "Sorted by name, sort by modification time" : "Sorted by modification time, sort by name"}
+          disabled={isSyncing}
+          onPress={() => setSortBy((byName) ? "mtime" : "name")}
+        />
+        {(colUid ?? filterBy) && (
+          <AppbarButton
+            icon="notebook"
+            title="Manage Notebook"
+            disabled={isSyncing}
+            onPress={() => navigation.navigate("CollectionChangelog", { colUid: (colUid ?? filterBy)! })}
+          />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={{ flexDirection: "row" }}>

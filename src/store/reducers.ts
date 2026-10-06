@@ -377,6 +377,10 @@ export interface SettingsType {
   ranWizrd: boolean;
   theme: "auto" | "dark" | "light";
   fontSize: number;
+  // Whether the sidebar with the notebooks and notes is shown on wide screens
+  sidebarVisible: boolean;
+  // Its width in pixels, which can be changed by dragging its edge
+  sidebarWidth: number;
   viewSettings: {
     defaultViewMode: ViewModeKey;
     lastViewMode: boolean;
@@ -399,6 +403,8 @@ export const settingsReducer = handleActions(
     ranWizrd: false,
     theme: "auto",
     fontSize: 16,
+    sidebarVisible: true,
+    sidebarWidth: 280,
     viewSettings: {
       defaultViewMode: "viewer",
       lastViewMode: false,

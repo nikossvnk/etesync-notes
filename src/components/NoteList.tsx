@@ -26,7 +26,7 @@ function sortName(aIn: CachedItem, bIn: CachedItem) {
   return a.localeCompare(b);
 }
 
-function getSortFunction(sortOrder: string) {
+export function getSortFunction(sortOrder: string) {
   const sortFunctions: (typeof sortName)[] = [];
 
   switch (sortOrder) {
@@ -159,7 +159,10 @@ export default function NoteList(props: PropsType) {
   const syncGate = useSyncGate();
   const theme = useTheme();
   const etebase = useCredentials();
-  const { width } = useWindowDimensions();
+  // The width of the list itself, which is less than the window's next to the sidebar
+  const windowWidth = useWindowDimensions().width;
+  const [listWidth, setListWidth] = React.useState<number>();
+  const width = listWidth ?? windowWidth;
   const numColumns = Math.min(Math.max(Math.floor(width / 200), 2), 6);
 
   // The item managers the cards load their previews with, created as needed
@@ -228,6 +231,7 @@ export default function NoteList(props: PropsType) {
       // Changing the number of columns on the fly is not supported
       key={numColumns}
       numColumns={numColumns}
+      onLayout={(e) => setListWidth(e.nativeEvent.layout.width)}
       data={entriesList}
       keyExtractor={(item) => item.uid}
       renderItem={renderEntry}

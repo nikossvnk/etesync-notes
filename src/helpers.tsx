@@ -6,6 +6,7 @@ import { AppState, AppStateStatus, Platform, useWindowDimensions } from "react-n
 import * as Etebase from "etebase";
 
 import { logger } from "./logging";
+import * as C from "./constants";
 
 export const defaultColor = "#8BC34A";
 
@@ -48,7 +49,7 @@ export function startTask<T = any>(func: () => Promise<T> | T, delay = 0): Promi
   });
 }
 
-function isFunction(f: any): f is Function { // eslint-disable-line @typescript-eslint/ban-types
+function isFunction(f: any): f is Function {
   return f instanceof Function;
 }
 
@@ -208,4 +209,17 @@ export function useDeviceBreakpoint(device: keyof typeof deviceBreakpoints) {
   }, [width, device]);
 
   return breakpoint;
+}
+
+// How a server is named in the app: by its address, without https:// (but with http://, which isn't encrypted)
+export function serverName(serverUrl: string) {
+  const trimmed = serverUrl.trim().replace(/\/+$/, "");
+  if (trimmed === C.serviceApiBase.replace(/\/+$/, "")) {
+    return "EteSync";
+  }
+  const match = /^(https?):\/\/(.*)$/i.exec(trimmed);
+  if (!match) {
+    return trimmed;
+  }
+  return (match[1].toLowerCase() === "http") ? trimmed : match[2];
 }

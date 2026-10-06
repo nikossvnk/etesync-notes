@@ -53,3 +53,7 @@ The helpers are in `lib.js`. Tests create the notes they need with `api.addNote(
 server), rather than relying on what's already in the account. To check what a note shows use
 `noteText()` or `viewerText()`: they fail when a saved note doesn't open in the viewer or doesn't
 show its text there, so that "opening a note shows it" is part of every test that reads a note.
+
+Sessions are 900 pixels wide, which is the layout of phones and small tablets. For the layout of wide
+screens (the sidebar, and the actions in the bars instead of menus), pass a size:
+`session(browser, "A", { width: 1280, height: 800 })`, as `sidebar.js` and `wide-actions.js` do.

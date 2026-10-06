@@ -18,6 +18,12 @@ run(async () => {
   await A.vis('input[aria-label="Server URL"]').fill(config.serverUrl);
   await A.btn(/^log in$/i).click(); await A.wait(8000);
   check("the test server is accepted", await A.has(name));
+  // The menu says which server the account is on (with http://, as the test server isn't encrypted)
+  await A.btn(/^main menu$/i).click(); await A.wait(1000);
+  const server = await A.p.locator('[aria-label^="Server: "] >> visible=true').first().getAttribute("aria-label").catch(() => "");
+  check("the menu shows the server", server === `Server: ${config.serverUrl.replace(/\/+$/, "")}` &&
+    await A.p.getByText(config.serverUrl.replace(/\/+$/, ""), { exact: true }).locator("visible=true").count() === 1, server);
+  await A.p.keyboard.press("Escape"); await A.p.mouse.click(1000, 400); await A.wait(800);
   await A.open(name); await A.wait(1500);
   const shown = await A.viewerText();
   check("the heading is rendered", /^Heading$/m.test(shown), shown);
