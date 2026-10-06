@@ -36,7 +36,9 @@ They change the data of the test account, so never point them at a real server o
    node run.js offline.js         # or some of them
    ```
 
-A full run takes about 15 minutes, as the tests wait for syncs and reconnections.
+A full run takes about 15 minutes, as the tests wait for syncs and reconnections. It starts by
+emptying the test account (deleting all of its notebooks), as the notes that earlier runs left behind
+fill the lists the tests look in; `E2E_KEEP_DATA=1` skips that. Running some of the tests keeps the data.
 
 ## Configuration
 

@@ -26,7 +26,7 @@ const upTargets: { [name in RouteName]?: UpTarget } = {
   NoteEdit: { names: lists },
   NoteProps: { names: ["NoteEdit"], params: note },
   NoteMove: { names: ["NoteEdit"], params: note },
-  CollectionCreate: { names: [...lists, "NoteCreate", "NoteMove"] },
+  CollectionCreate: { names: [...lists, "NoteCreate"] },
   CollectionChangelog: { names: lists },
   CollectionEdit: { names: ["CollectionChangelog"], params: notebook },
   CollectionMembers: { names: ["CollectionChangelog"], params: notebook },

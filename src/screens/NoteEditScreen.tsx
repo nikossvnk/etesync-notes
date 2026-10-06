@@ -3,8 +3,9 @@
 
 import * as React from "react";
 import * as Etebase from "etebase";
-import { View, ViewProps, KeyboardAvoidingView, Platform } from "react-native";
-import { Paragraph } from "react-native-paper";
+import { View, ViewProps, KeyboardAvoidingView, Platform, StyleSheet, TextInput } from "react-native";
+import { Appbar as PaperAppbar, Paragraph, Text, TouchableRipple } from "react-native-paper";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useNavigation, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -20,7 +21,8 @@ import { useCredentials } from "../credentials";
 import Markdown from "../widgets/Markdown";
 import { useSelector, useDispatch } from "react-redux";
 import { pushMessage, setCacheItem, setSettings, setSyncItem, unsetCacheItem } from "../store/actions";
-import { newNotes } from "../newNotes";
+import { newNotes, openInEditor } from "../newNotes";
+import { moveNote, nameFromContent, noteName, untitled } from "../notes";
 import { requestSync, saveItemsLocally } from "../sync/SyncManager";
 import LoadingIndicator from "../widgets/LoadingIndicator";
 import Menu from "../widgets/Menu";
@@ -28,7 +30,9 @@ import ConfirmationDialog from "../widgets/ConfirmationDialog";
 import NotFound from "../widgets/NotFound";
 import AppbarAction from "../widgets/AppbarAction";
 import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
-import { fontFamilies } from "../helpers";
+import { Theme } from "../theme";
+import { defaultColor, fontFamilies } from "../helpers";
+import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
 import { canShare, shareItem } from "../import-export";
 
@@ -46,9 +50,23 @@ export default function NoteEditScreen(props: PropsType) {
   const loadedKeyRef = React.useRef<string>(undefined);
   const [loading, setLoading] = React.useState(true);
   const [content, setContent_] = React.useState("");
+  const [title, setTitle_] = React.useState("");
+  // The current title and content, for saving them from callbacks that were made before they changed
+  const contentRef = React.useRef("");
+  const titleRef = React.useRef("");
+  // Set when the note was moved to another notebook, as it isn't this one anymore then
+  const movedRef = React.useRef(false);
+  const textInputRef = React.useRef<TextInput>(null);
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const { defaultViewMode, lastViewMode } = viewSettings;
-  const [viewMode, setViewMode] = React.useState((defaultViewMode === "last") ? lastViewMode : (defaultViewMode === "viewer"));
+  const { colUid, itemUid } = props.route.params;
+  const [viewMode, setViewMode] = React.useState(() => (
+    // New notes, and notes that were moved while they were being edited, open in the editor
+    (openInEditor.delete(itemUid)) ? false : ((defaultViewMode === "last") ? lastViewMode : (defaultViewMode === "viewer"))
+  ));
+  const wide = useWideAppbar();
+  // A new note starts with writing its title
+  const [isNew] = React.useState(() => newNotes.has(itemUid));
   const [noteDeleteDialogShow, setNoteDeleteDialogShow] = React.useState(false);
   const dispatch = useAsyncDispatch();
   const syncDispatch = useDispatch();
@@ -59,7 +77,6 @@ export default function NoteEditScreen(props: PropsType) {
   const navigation = useNavigation<NavigationProp>();
   const syncGate = useSyncGate();
 
-  const { colUid, itemUid } = props.route.params;
   const cacheCollection = (colUid) ? cacheItems.get(colUid) : undefined;
   const cacheItem = (cacheCollection && itemUid) ? cacheCollection.get(itemUid) : undefined;
 
@@ -72,29 +89,46 @@ export default function NoteEditScreen(props: PropsType) {
   }, []);
 
   React.useEffect(() => {
+    const name = (cacheItem) ? (cacheItem.meta.name || untitled) : "Note Not Found";
     navigation.setOptions({
-      title: cacheItem?.meta.name ?? "Note Not Found",
+      title: name,
+      // The title can be changed in the editor, and on wide screens the notebook is next to it
+      headerTitle: (cacheItem && !loading) ? () => (
+        <View style={styles.headerTitle}>
+          <NoteTitle
+            editing={!viewMode}
+            value={(viewMode) ? name : title}
+            placeholder={nameFromContent(content) || "Title"}
+            onChange={setTitle}
+            onSubmit={() => textInputRef.current?.focus()}
+            autoFocus={isNew}
+          />
+          {wide && (
+            <NotebookPicker colUid={colUid} editable={!viewMode} onChange={changeNotebook} onAppbar />
+          )}
+        </View>
+      ) : undefined,
       headerRight: () => (
         <RightAction
           viewMode={viewMode}
           setViewMode={setLastViewMode}
           onSave={onSave}
-          onEdit={() => navigation.navigate("NoteProps", { colUid, itemUid })}
           onDelete={() => setNoteDeleteDialogShow(true)}
-          onMove={() => navigation.navigate("NoteMove", { colUid, itemUid })}
           onShare={onShare}
           changed={changed}
         />
       ),
     });
-  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed]);
+  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, wide, loading]);
 
   // Write the content to the local cache and queue the note to be pushed to the server
-  async function saveLocally(content: string) {
+  async function saveLocally() {
     if (!etebase) {
       return;
     }
     dirtyRef.current = false;
+    const content = contentRef.current;
+    const name = noteName(titleRef.current, content);
 
     const colMgr = etebase.getCollectionManager();
     const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
@@ -108,6 +142,7 @@ export default function NoteEditScreen(props: PropsType) {
       const item = itemMgr.cacheLoad(current.cache);
 
       const meta = item.getMeta();
+      meta.name = name;
       meta.mtime = (new Date()).getTime();
       item.setMeta(meta);
       await item.setContent(content);
@@ -154,7 +189,10 @@ export default function NoteEditScreen(props: PropsType) {
       }
       const firstLoad = loadedKeyRef.current !== key;
       loadedKeyRef.current = key;
+      contentRef.current = content;
       setContent_(content);
+      titleRef.current = cacheItem.meta.name ?? "";
+      setTitle_(titleRef.current);
       // There is nothing to view in an empty note (e.g. one that was just created), so start writing
       if (firstLoad && (content === "")) {
         setViewMode(false);
@@ -167,19 +205,56 @@ export default function NoteEditScreen(props: PropsType) {
     };
   }, [syncGate, colUid, itemUid, cache]);
 
-  function setContent(content: string) {
+  function changed_() {
     dirtyRef.current = true;
     if (!changed) {
       syncDispatch(setSyncItem(colUid, itemUid) as any);
     }
-    persistItem(content);
+    persistItem();
+  }
+
+  function setContent(content: string) {
+    contentRef.current = content;
+    changed_();
     setContent_(content);
+  }
+
+  function setTitle(title: string) {
+    titleRef.current = title;
+    changed_();
+    setTitle_(title);
+  }
+
+  // Moves the note to another notebook, and shows it there
+  async function changeNotebook(toUid: string) {
+    if ((toUid === colUid) || movedRef.current) {
+      return;
+    }
+    persistItem.cancel();
+    if (dirtyRef.current) {
+      await saveLocally();
+    }
+    const state = store.getState() as unknown as StoreState;
+    const current = state.cache.items.get(colUid)?.get(itemUid);
+    const from = state.cache.collections.get(colUid);
+    const to = state.cache.collections.get(toUid);
+    if (!current || !from || !to) {
+      return;
+    }
+    movedRef.current = true;
+    const queued = state.sync.items.hasIn([colUid, itemUid]);
+    const newUid = await moveNote(etebase, from, colUid, current, to, queued);
+    if (!viewMode) {
+      openInEditor.add(newUid);
+    }
+    syncDispatch(pushMessage({ message: `Moved to ${to.meta.name}`, severity: "success" }) as any);
+    navigation.replace("NoteEdit", { colUid: toUid, itemUid: newUid });
   }
 
   async function onSaveDo() {
     persistItem.cancel();
     if (dirtyRef.current) {
-      await saveLocally(content);
+      await saveLocally();
     }
     if (etebase) {
       requestSync(etebase, true);
@@ -188,12 +263,16 @@ export default function NoteEditScreen(props: PropsType) {
 
   // Called when the screen is left: saves the note, or throws it away if it was just created and is still empty
   onLeaveRef.current = () => {
+    if (movedRef.current) {
+      // It was saved before it was moved
+      return;
+    }
     if (!newNotes.has(itemUid)) {
       onSaveDo();
       return;
     }
     newNotes.delete(itemUid);
-    if (content.trim() !== "") {
+    if ((contentRef.current.trim() !== "") || (titleRef.current.trim() !== "")) {
       onSaveDo();
       return;
     }
@@ -256,6 +335,11 @@ export default function NoteEditScreen(props: PropsType) {
 
   return (
     <>
+      {!wide && (
+        <View style={styles.notebookLine}>
+          <NotebookPicker colUid={colUid} editable={!viewMode} onChange={changeNotebook} />
+        </View>
+      )}
       {viewMode ? (
         <ScrollView keyboardAware contentContainerStyle={{ flexGrow: 1, padding: 10 }} testID="note-viewer">
           <Markdown
@@ -265,6 +349,7 @@ export default function NoteEditScreen(props: PropsType) {
         </ScrollView>
       ) : (
         <TextEditor
+          inputRef={textInputRef}
           style={{ flexGrow: 1 }}
           contentStyle={{ padding: 10 }}
           setContent={setContent}
@@ -302,14 +387,12 @@ interface RightActionViewProps {
   viewMode: boolean;
   changed: boolean;
   setViewMode: (value: boolean) => void;
-  onEdit: () => void;
   onSave: () => void;
   onDelete: () => void;
-  onMove: () => void;
   onShare: () => void;
 }
 
-function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, onShare, changed }: RightActionViewProps) {
+function RightAction({ viewMode, setViewMode, onSave, onDelete, onShare, changed }: RightActionViewProps) {
   const [showMenu, setShowMenu] = React.useState(false);
   const wide = useWideAppbar();
 
@@ -318,8 +401,6 @@ function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, 
       <View style={{ flexDirection: "row" }}>
         <AppbarButton icon={viewMode ? "pencil" : "eye"} title="View mode" onPress={() => setViewMode(!viewMode)} />
         <AppbarButton icon="content-save" title="Save" disabled={!changed} onPress={onSave} />
-        <AppbarButton icon="form-textbox" title="Edit Properties" onPress={onEdit} />
-        <AppbarButton icon="folder-move-outline" title="Move" onPress={onMove} />
         {(canShare()) ? (
           <AppbarButton icon="share-variant" title="Share" onPress={onShare} />
         ) : null}
@@ -340,22 +421,10 @@ function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, 
           <AppbarAction icon="dots-vertical" accessibilityLabel="Menu" onPress={() => setShowMenu(true)} />
         )}
       >
-        <Menu.Item leadingIcon="pencil" title="Edit Properties"
-          onPress={() => {
-            setShowMenu(false);
-            onEdit();
-          }}
-        />
         <Menu.Item leadingIcon="delete" title="Delete"
           onPress={() => {
             setShowMenu(false);
             onDelete();
-          }}
-        />
-        <Menu.Item leadingIcon="share" title="Move"
-          onPress={() => {
-            setShowMenu(false);
-            onMove();
           }}
         />
         <Menu.Item leadingIcon="content-save" title="Save"
@@ -379,6 +448,7 @@ function RightAction({ viewMode, setViewMode, onSave, onEdit, onDelete, onMove, 
 }
 
 interface TextEditorPropsType extends ViewProps {
+  inputRef?: React.Ref<TextInput>;
   content: string;
   setContent: (value: string) => void;
   contentStyle?: ViewProps["style"];
@@ -398,6 +468,8 @@ function TextEditor(props: TextEditorPropsType) {
       style={[{ backgroundColor: theme.colors.background }, props.style]}
     >
       <RawTextInput
+        ref={props.inputRef}
+        accessibilityLabel="Content"
         textAlignVertical="top"
         multiline
         scrollEnabled
@@ -408,3 +480,160 @@ function TextEditor(props: TextEditorPropsType) {
     </KeyboardAvoidingView>
   );
 }
+
+// The color of text on the bar at the top
+function appbarTextColor(theme: Theme) {
+  return (theme.dark) ? theme.colors.onSurface : "#000000";
+}
+
+interface NoteTitlePropsType {
+  editing: boolean;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  autoFocus?: boolean;
+}
+
+// The title of the note in the bar at the top, which can be changed in the editor
+function NoteTitle(props: NoteTitlePropsType) {
+  const theme = useTheme();
+  const { editing, value, placeholder, onChange, onSubmit, autoFocus } = props;
+
+  const color = appbarTextColor(theme);
+  if (!editing) {
+    // (it doesn't get the bar's color, as it's not right in the bar)
+    return <PaperAppbar.Content title={value} color={color} style={styles.title} />;
+  }
+
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      placeholder={placeholder}
+      placeholderTextColor={color + "99"}
+      accessibilityLabel="Title"
+      autoFocus={autoFocus}
+      returnKeyType="next"
+      onSubmitEditing={onSubmit}
+      style={[styles.title, styles.titleInput, { color, borderBottomColor: color + "66" }]}
+    />
+  );
+}
+
+interface NotebookPickerPropsType {
+  colUid: string;
+  // Whether it can be changed, which moves the note to another notebook
+  editable: boolean;
+  onChange: (colUid: string) => void;
+  // Shown in the bar at the top, rather than under it
+  onAppbar?: boolean;
+}
+
+// The notebook of the note: under the bar at the top on narrow screens, and in it on wide ones
+function NotebookPicker(props: NotebookPickerPropsType) {
+  const theme = useTheme();
+  const { colUid, editable, onChange, onAppbar } = props;
+  const [open, setOpen] = React.useState(false);
+  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
+  const notebooks = Array.from(cacheCollections.entries())
+    .map(([uid, col]) => ({ uid, name: col.meta.name ?? "", color: col.meta.color || defaultColor }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const current = notebooks.find((x) => x.uid === colUid);
+  const color = (onAppbar) ? appbarTextColor(theme) : theme.colors.onSurface;
+
+  const content = (
+    <View style={[styles.notebook, (editable) ? { borderColor: color + "66" } : undefined, (editable) ? styles.notebookEditable : undefined]}>
+      <View style={[styles.notebookColor, { backgroundColor: current?.color ?? defaultColor }]} />
+      <Text style={[styles.notebookName, { color }]} numberOfLines={1}>{current?.name}</Text>
+      {editable && <MaterialCommunityIcons name="menu-down" size={20} color={color} />}
+    </View>
+  );
+
+  if (!editable) {
+    return (
+      <View accessibilityLabel={`Notebook: ${current?.name}`} style={styles.notebookWrap}>
+        {content}
+      </View>
+    );
+  }
+
+  const anchor = (
+    <TouchableRipple
+      onPress={() => setOpen(true)}
+      accessibilityRole="button"
+      accessibilityLabel={`Notebook: ${current?.name}`}
+      style={styles.notebookWrap}
+    >
+      {content}
+    </TouchableRipple>
+  );
+
+  return (
+    <Select
+      visible={open}
+      onDismiss={() => setOpen(false)}
+      options={notebooks}
+      titleAccossor={(x) => x.name}
+      active={(x) => x.uid === colUid}
+      onChange={(chosen) => {
+        setOpen(false);
+        if (chosen) {
+          onChange(chosen.uid);
+        }
+      }}
+      anchor={anchor}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  headerTitle: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  title: {
+    flex: 1,
+  },
+  titleInput: {
+    fontSize: 20,
+    marginLeft: 12,
+    marginRight: 8,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    minWidth: 0,
+  },
+  notebookLine: {
+    flexDirection: "row",
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  notebookWrap: {
+    flexShrink: 1,
+    maxWidth: 280,
+    borderRadius: 16,
+  },
+  notebook: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  notebookEditable: {
+    paddingRight: 2,
+  },
+  notebookColor: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
+  },
+  notebookName: {
+    fontSize: 14,
+    flexShrink: 1,
+  },
+});

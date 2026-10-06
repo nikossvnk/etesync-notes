@@ -17,8 +17,8 @@ import ChangePasswordScreen from "./screens/ChangePasswordScreen";
 import DebugLogsScreen from "./screens/DebugLogsScreen";
 import HomeScreen from "./screens/HomeScreen";
 import NoteEditScreen from "./screens/NoteEditScreen";
-import NotePropertiesScreen from "./screens/NotePropertiesScreen";
-import NoteMoveScreen from "./screens/NoteMoveScreen";
+import NoteCreateScreen from "./screens/NoteCreateScreen";
+import NoteRedirectScreen from "./screens/NoteRedirectScreen";
 import CollectionEditScreen from "./screens/CollectionEditScreen";
 import CollectionChangelogScreen from "./screens/CollectionChangelogScreen";
 import CollectionMembersScreen from "./screens/CollectionMembersScreen";
@@ -134,15 +134,15 @@ export default React.memo(function RootNavigator() {
               />
               <Stack.Screen
                 name="NoteCreate"
-                component={NotePropertiesScreen}
+                component={NoteCreateScreen}
               />
               <Stack.Screen
                 name="NoteProps"
-                component={NotePropertiesScreen}
+                component={NoteRedirectScreen}
               />
               <Stack.Screen
                 name="NoteMove"
-                component={NoteMoveScreen}
+                component={NoteRedirectScreen}
               />
               <Stack.Screen
                 name="CollectionEdit"

@@ -43,9 +43,63 @@ exports.api = {
   async login() {
     return Etebase.Account.login(config.username, config.password, config.serverUrl);
   },
+  // Deletes all of the notebooks (and so their notes) and makes an empty "My Notes", so that the
+  // notes of earlier runs don't fill the lists. Only for the test account!
+  async reset() {
+    const etebase = await this.login();
+    const colMgr = etebase.getCollectionManager();
+    let deleted = 0;
+    for (const col of await this.notebooks(etebase)) {
+      if (!col.isDeleted) {
+        col.delete();
+        await colMgr.upload(col);
+        deleted++;
+      }
+    }
+    await this.notebook(etebase, "My Notes");
+    await etebase.logout();
+    return deleted;
+  },
+  // All of the notebooks, which come in pages (the test account gets more of them with every run)
+  async notebooks(etebase) {
+    const colMgr = etebase.getCollectionManager();
+    const ret = [];
+    let stoken;
+    for (;;) {
+      const page = await colMgr.list("etebase.md.note", { stoken, limit: 50 });
+      ret.push(...page.data);
+      stoken = page.stoken;
+      if (page.done) {
+        return ret;
+      }
+    }
+  },
+  // All of the notes of a notebook (also in pages)
+  async items(etebase, col) {
+    const itemMgr = etebase.getCollectionManager().getItemManager(col);
+    const ret = [];
+    let stoken;
+    for (;;) {
+      const page = await itemMgr.list({ stoken, limit: 50 });
+      ret.push(...page.data);
+      stoken = page.stoken;
+      if (page.done) {
+        return ret;
+      }
+    }
+  },
+  // The content of the note with the name in the notebook (that isn't deleted), if there's one
+  async noteContent(notebookName, name) {
+    const etebase = await this.login();
+    const col = await this.notebook(etebase, notebookName);
+    const item = (await this.items(etebase, col)).find((x) => !x.isDeleted && x.getMeta().name === name);
+    const content = (item) ? await item.getContent(Etebase.OutputFormat.String) : undefined;
+    await etebase.logout();
+    return content;
+  },
   async notebook(etebase, name) {
     const colMgr = etebase.getCollectionManager();
-    const existing = (await colMgr.list("etebase.md.note")).data.find((x) => !x.isDeleted && x.getMeta().name === name);
+    const existing = (await this.notebooks(etebase)).find((x) => !x.isDeleted && x.getMeta().name === name);
     if (existing) {
       return existing;
     }
@@ -67,7 +121,7 @@ exports.api = {
     const etebase = await this.login();
     const colMgr = etebase.getCollectionManager();
     const names = [];
-    for (const col of (await colMgr.list("etebase.md.note")).data) {
+    for (const col of await this.notebooks(etebase)) {
       let stoken;
       for (;;) {
         const items = await colMgr.getItemManager(col).list({ stoken });
@@ -128,15 +182,23 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
   s.syncLabel = () => p.evaluate(() => [...document.querySelectorAll('[aria-label^="Sync"]')].filter((e) => e.offsetParent).map((e) => e.getAttribute("aria-label")).join("|"));
   s.shot = (name) => p.screenshot({ path: `${name}-${tag}.png` });
 
-  // Creates a note with the "New" button of the notes list, in the given notebook (or the preselected one)
+  // Creates a note with the "New" button of the notes list, which opens it in the editor, with the
+  // title (if any) typed in, and in the given notebook (or the preselected one)
   s.createNote = async (name, notebook) => {
-    await btn(/^new$/i).click(); await wait(1500);
-    await vis('input[aria-label="Name"]').fill(name);
-    if (notebook) {
-      await vis('input[aria-label="Notebook"]').click({ force: true }); await wait(1000);
-      await p.getByText(notebook, { exact: true }).locator("visible=true").last().click({ force: true }); await wait(800);
+    await btn(/^new$/i).click(); await wait(2500);
+    if (name) {
+      await vis('input[aria-label="Title"]').fill(name); await wait(300);
     }
-    await btn(/^save$/i).click(); await wait(3000);
+    if (notebook) {
+      await s.chooseNotebook(notebook);
+    }
+  };
+  // The notebook of the open note, as it says next to the title or under it
+  s.notebookOfNote = async () => ((await p.locator('[aria-label^="Notebook: "] >> visible=true').first().getAttribute("aria-label")) || "").replace(/^Notebook: /, "");
+  // Puts the open note (which has to be in the editor) in another notebook
+  s.chooseNotebook = async (name) => {
+    await p.getByRole("button", { name: /^Notebook: / }).locator("visible=true").first().click(); await wait(1000);
+    await p.getByText(name, { exact: true }).locator("visible=true").last().click({ force: true }); await wait(3000);
   };
 
   // A saved note has to open in the viewer and show its text there

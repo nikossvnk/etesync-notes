@@ -1,5 +1,5 @@
 // Wide screens: the actions of the screens are buttons in their bars, not in a menu
-const { launch, session, run, check, api, unique, Etebase } = require("../lib");
+const { launch, session, run, check, api, unique, config } = require("../lib");
 run(async () => {
   const n = unique();
   const notebook = "Actions " + n;
@@ -50,45 +50,31 @@ run(async () => {
   // A note
   await A.open("Apple " + n);
   check("a note has no menu", await noMenu());
-  for (const name of ["View mode", "Save", "Edit Properties", "Move", "Delete"]) {
+  for (const name of ["View mode", "Save", "Delete"]) {
     check(`it has the ${name} button`, await bar(name).count() === 1);
   }
+  check("but none for the properties or to move it, which are in the note itself", await bar("Edit Properties").count() === 0 && await bar("Move").count() === 0);
   check("save is off while there's nothing to save", await bar("Save").isDisabled());
   await (await A.editor()).fill("added first, changed"); await A.wait(300);
   check("and on once the note was changed", !(await bar("Save").isDisabled()));
   await bar("Save").click(); await A.wait(5000);
-  const saved = await serverContent(notebook, "Apple " + n);
+  const saved = await api.noteContent(notebook, "Apple " + n);
   check("save saves it to the server", saved === "added first, changed", saved);
-  await bar("Edit Properties").click(); await A.wait(2000);
-  check("edit properties opens them", path() === "/notebook/ID/note/ID/properties", path());
-  await A.back();
-  await bar("Move").click(); await A.wait(2000);
-  check("move opens the move", path() === "/notebook/ID/note/ID/move", path());
-  await A.back();
   await bar("Delete").click(); await A.wait(1000);
   await A.p.getByRole("button", { name: /^ok$/i }).locator("visible=true").last().click(); await A.wait(5000);
   check("delete deletes the note", (await api.noteNames()).includes("DELETED:Apple " + n), (await api.noteNames()).filter((x) => x.endsWith("Apple " + n)));
   check("and goes back to the list", path() === "/", path());
 
-  // Narrow screens keep the menu
+  // Narrow screens keep the menu (the note is opened by its address, as the list is long)
+  await sidebar.getByRole("button", { name: "Note Zebra " + n, exact: true }).click(); await A.wait(2000);
+  const zebra = new URL(A.p.url()).pathname;
   const narrow = await session(b, "narrow");
   await narrow.login();
-  await narrow.open("Zebra " + n);
+  await narrow.p.goto(config.appUrl + zebra); await narrow.wait(6000);
   check("a narrow screen still has the menu", await narrow.p.getByRole("button", { name: "Menu", exact: true }).locator("visible=true").count() === 1 &&
     await narrow.p.getByRole("button", { name: "Delete", exact: true }).locator("visible=true").count() === 0);
   await b.close();
 });
-
-// The content of a note on the server
-async function serverContent(notebook, name) {
-  const etebase = await api.login();
-  const col = await api.notebook(etebase, notebook);
-  const items = (await etebase.getCollectionManager().getItemManager(col).list()).data;
-  const item = items.find((x) => !x.isDeleted && x.getMeta().name === name);
-  const content = item ? await item.getContent(Etebase.OutputFormat.String) : undefined;
-  await etebase.logout();
-  return content;
-}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

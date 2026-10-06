@@ -9,6 +9,7 @@ import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
 import { CachedItem, StoreState } from "../store";
 import { defaultColor } from "../helpers";
+import { untitled } from "../notes";
 
 import NotFound from "../widgets/NotFound";
 import Link from "../widgets/Link";
@@ -119,12 +120,12 @@ const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
         <Card
           {...props}
           style={styles.card}
-          accessibilityLabel={item.meta.name}
+          accessibilityLabel={item.meta.name || untitled}
         >
           <View style={styles.cardInner}>
             <View style={[styles.cardColor, { backgroundColor: color }]} />
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle} numberOfLines={2}>{item.meta.name}</Text>
+              <Text style={styles.cardTitle} numberOfLines={2}>{item.meta.name || untitled}</Text>
               <Text style={styles.cardPreview} numberOfLines={4}>{preview}</Text>
               <View style={styles.cardFooter}>
                 {/* The time moves to a second line when it doesn't fit next to the date */}

@@ -5,7 +5,7 @@ import * as React from "react";
 import { TextInput } from "react-native";
 import { useTheme } from "../theme";
 
-export default function RawTextInput(props_: React.ComponentProps<typeof TextInput>) {
+export default function RawTextInput(props_: React.ComponentProps<typeof TextInput> & { ref?: React.Ref<TextInput> }) {
   const theme = useTheme();
   const { style, ...props } = props_;
 

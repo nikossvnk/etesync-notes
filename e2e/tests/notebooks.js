@@ -68,7 +68,7 @@ run(async () => {
   await B.sync();
   check("it never reaches the other device", !(await B.has("Ghost " + n)));
   const etebase = await api.login();
-  const names = (await etebase.getCollectionManager().list("etebase.md.note")).data.map((c) => c.getMeta().name);
+  const names = (await api.notebooks(etebase)).map((c) => c.getMeta().name);
   await etebase.logout();
   check("or the server", !names.includes("Ghost " + n));
   await b.close();

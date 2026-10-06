@@ -9,6 +9,7 @@ import { useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 
 import { useCredentials } from "../credentials";
+import { untitled } from "../notes";
 import { useSyncGate } from "../SyncGate";
 import { StoreState } from "../store";
 
@@ -201,7 +202,7 @@ export default function Search(props: PropsType) {
           // FIXME We need to remove the markdown formatting and the repeated new lines to have nicer results
           const content = await item.getContent(Etebase.OutputFormat.String);
 
-          notesList.push({ name: cachedItem.meta.name!, content, id: `${colUid}:${uid}` });
+          notesList.push({ name: cachedItem.meta.name || untitled, content, id: `${colUid}:${uid}` });
         }
       }
       minisearch.removeAll();

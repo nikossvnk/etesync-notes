@@ -44,26 +44,18 @@ run(async () => {
   await row("Note Second " + n).click(); await A.wait(2500);
   await (await A.editor()).fill("the second note, changed"); await A.wait(500);
   await row("Note First " + n).click(); await A.wait(6000);
-  const second = async () => {
-    const etebase = await api.login();
-    const col = await api.notebook(etebase, "My Notes");
-    const items = (await etebase.getCollectionManager().getItemManager(col).list()).data;
-    const item = items.find((x) => !x.isDeleted && x.getMeta().name === "Second " + n);
-    const content = item ? await item.getContent(require("etebase").OutputFormat.String) : undefined;
-    await etebase.logout();
-    return content;
-  };
-  check("an edited note is saved when another one is opened from the sidebar", (await second()) === "the second note, changed", await second());
+  const second = () => api.noteContent("My Notes", "Second " + n);
+  check("an edited note is saved when another one is opened from the sidebar", (await second()) === "the second note, changed",
+    [await second(), (await api.noteNames()).filter((x) => x.includes(n))]);
 
   // A new note that's left empty for another note is thrown away
-  await row("New note in " + other).click(); await A.wait(1500);
-  check("a new note from the sidebar is in its notebook", (await A.vis('input[aria-label="Notebook"]').inputValue()) === other, await A.vis('input[aria-label="Notebook"]').inputValue());
-  await A.vis('input[aria-label="Name"]').fill("Empty " + n);
-  await A.btn(/^save$/i).click(); await A.wait(3000);
-  check("the new note is in the sidebar", await shown("Note Empty " + n));
+  const notesBefore = (await api.noteNames()).length;
+  await row("New note in " + other).click(); await A.wait(2500);
+  check("a new note from the sidebar is in its notebook", (await A.notebookOfNote()) === other, await A.notebookOfNote());
+  check("the new note is in the sidebar", await shown("Note Untitled"));
   await row("Note Third " + n).click(); await A.wait(4000);
-  check("left empty for another note: thrown away", !(await shown("Note Empty " + n)) && (await A.viewerText()).includes("the third note"));
-  check("and not on the server", !(await api.noteNames()).some((x) => x.endsWith("Empty " + n)));
+  check("left empty for another note: thrown away", !(await shown("Note Untitled")) && (await A.viewerText()).includes("the third note"));
+  check("and not on the server", (await api.noteNames()).length === notesBefore);
 
   // A notebook shows its notes in the list
   await row("Notebook " + other).click(); await A.wait(2500);

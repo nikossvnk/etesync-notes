@@ -28,15 +28,16 @@ run(async () => {
 
   await at("home has the menu button, no back button", "/", false);
   await A.open(note); await at("a note", "/notebook/ID/note/ID", true);
-  await menu("Edit Properties"); await at("its properties", "/notebook/ID/note/ID/properties", true);
-  await back(); await at("back from the properties: the note", "/notebook/ID/note/ID", true);
-  await menu("Edit Properties"); await back(); await menu("Edit Properties"); await back();
-  await at("after going in and out twice more: still the note", "/notebook/ID/note/ID", true);
   await back(); await at("back from the note: home", "/", false);
 
-  await A.open(note); await menu("Edit Properties");
-  await A.p.reload(); await A.wait(6000); await at("reloaded on the properties", "/notebook/ID/note/ID/properties", true);
-  await back(); await at("back: the note", "/notebook/ID/note/ID", true);
+  // The properties and the move of a note used to be screens of their own, their addresses open the note
+  await A.open(note);
+  const notePath = new URL(A.p.url()).pathname;
+  for (const old of ["properties", "move"]) {
+    await A.p.goto(config.appUrl + notePath + "/" + old); await A.wait(6000);
+    await at(`the old address of the ${old} opens the note`, "/notebook/ID/note/ID", true);
+    check(`showing it (${old})`, (await A.viewerText()).includes("for the navigation test"));
+  }
   await back(); await at("back: home", "/", false);
 
   await A.p.goto(config.appUrl + "/settings/about"); await A.wait(6000); await at("About loaded directly", "/settings/about", true);
@@ -54,14 +55,13 @@ run(async () => {
   await A.tab("Notes");
   await A.createNote("Moved " + n);
   await (await A.editor()).fill("moved note"); await A.wait(1500);
-  await menu("Move"); await at("the move screen", "/notebook/ID/note/ID/move", true);
-  await A.p.locator('input[aria-label="Move to Notebook"] >> visible=true').last().click({ force: true }); await A.wait(1000);
-  await A.p.getByText("Nav " + n, { exact: true }).locator("visible=true").last().click({ force: true }); await A.wait(800);
-  await A.p.getByRole("button", { name: /^move$/i }).locator("visible=true").last().click(); await A.wait(4000);
+  const before = new URL(A.p.url()).pathname;
+  await A.chooseNotebook("Nav " + n);
   await at("moved: the note", "/notebook/ID/note/ID", true);
+  check("in the other notebook", new URL(A.p.url()).pathname !== before && (await A.notebookOfNote()) === "Nav " + n, await A.notebookOfNote());
   // Still the screen that was being written in, so it's still in the editor
   check("it's the moved note, still in the editor", (await A.vis("textarea").inputValue()) === "moved note");
-  await back(); await at("back: home, not the move screen", "/", false);
+  await back(); await at("back: home, not the note it was moved from", "/", false);
   check("the moved note is listed once", (await A.text()).split("Moved " + n).length - 1 === 1);
 
   // Deleting a notebook: back home, with nothing stale behind it

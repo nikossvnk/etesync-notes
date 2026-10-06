@@ -136,6 +136,8 @@ export default function CollectionEditScreen(props: PropsType) {
             ...CommonActions.setParams({ colUid: collection.uid }),
             source: navigationState.key,
           });
+          // Back to the new note, which is created in it
+          goUp(navigation, props.route);
         } else {
           // We're gonna navigate to the notebook's page
           navigation.replace("Collection", { colUid: collection.uid });

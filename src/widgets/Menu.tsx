@@ -11,6 +11,12 @@ export default class Menu extends React.PureComponent<React.ComponentProps<typeo
   public render() {
     const { children, ...props } = this.props;
 
+    // A closed menu is only its anchor: Paper's menu moves the focus to the anchor, also when it's
+    // just there closed, which takes it away from e.g. the title of a new note
+    if (!props.visible) {
+      return props.anchor as React.ReactNode;
+    }
+
     return (
       <PaperMenu
         statusBarHeight={(Platform.OS === "ios") ? undefined : 0}

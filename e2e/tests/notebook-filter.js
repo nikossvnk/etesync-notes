@@ -18,8 +18,8 @@ run(async () => {
   check("All lists the notes of both notebooks", await listed("In my notes " + n) && await listed("In the other " + n));
   await chip(other);
   check("a notebook's chip lists only its notes", !(await listed("In my notes " + n)) && await listed("In the other " + n));
-  await A.btn(/^new$/i).click(); await A.wait(1500);
-  check("a new note is in the filtered notebook", (await A.vis('input[aria-label="Notebook"]').inputValue()) === other);
+  await A.btn(/^new$/i).click(); await A.wait(2500);
+  check("a new note is in the filtered notebook", (await A.notebookOfNote()) === other, await A.notebookOfNote());
   await A.back();
   await A.p.reload(); await A.wait(6000);
   check("the filter is remembered after a reload", !(await listed("In my notes " + n)) && await listed("In the other " + n));

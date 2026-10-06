@@ -13,6 +13,7 @@ import { setSettings } from "../store/actions";
 import { defaultColor, useDeviceBreakpoint } from "../helpers";
 import { useTheme } from "../theme";
 import { getSortFunction } from "./NoteList";
+import { untitled } from "../notes";
 
 // The sidebar's width can be changed between these, and always leaves room for the screen next to it
 const minWidth = 200;
@@ -64,7 +65,7 @@ export function useSidebarShown() {
 }
 
 // The screens that belong to a note, so that it's shown as the current one in the tree
-const noteScreens = ["NoteEdit", "NoteProps", "NoteMove"];
+const noteScreens = ["NoteEdit"];
 
 // The state of the stack with the screens, which is inside of the drawer
 function useStackState() {
@@ -296,8 +297,8 @@ export default function Sidebar() {
               {open && notebook.notes.map(([itemUid, item]) => (
                 <Row
                   key={itemUid}
-                  label={item.meta.name ?? ""}
-                  accessibilityLabel={`Note ${item.meta.name}`}
+                  label={item.meta.name || untitled}
+                  accessibilityLabel={`Note ${item.meta.name || untitled}`}
                   indent={1}
                   selected={currentNote === `${notebook.colUid}/${itemUid}`}
                   onPress={() => openNote(notebook.colUid, itemUid)}
