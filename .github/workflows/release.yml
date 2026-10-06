@@ -87,10 +87,19 @@ jobs:
           ORG_GRADLE_PROJECT_releaseKeyAlias: ${{ secrets.RELEASE_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_releaseKeyPassword: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
+          # The version code comes from the version, so that it always grows (Android only installs an
+          # update with a higher one): 1.9.0 is 10900. Releases up to 1.8.1 used the run number (at most 5).
+          IFS=. read -r major minor patch <<< "${TAG#v}"
+          if [ "$minor" -ge 100 ] || [ "$patch" -ge 100 ]; then
+            echo "The version code can't be made from $TAG" >&2
+            exit 1
+          fi
+          versionCode=$(( major * 10000 + minor * 100 + patch ))
+          echo "Version code: $versionCode"
           ./gradlew assembleRelease --no-daemon \
             -PreleaseStoreFile="$RUNNER_TEMP/release.jks" \
             -PappVersionName="${TAG#v}" \
-            -PappVersionCode="$GITHUB_RUN_NUMBER" \
+            -PappVersionCode="$versionCode" \
             -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
 
       - name: Remove the release keystore
