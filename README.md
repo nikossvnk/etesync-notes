@@ -3,6 +3,14 @@
   <h1 align="center">EteSync - Encrypt Everything</h1>
 </p>
 
+> [!NOTE]
+> **This is an independent fork** of [EteSync Notes](https://github.com/etesync/etesync-notes), the original
+> project of the EteSync authors. This fork is not affiliated with, endorsed by or supported by EteSync or
+> [etesync.com](https://www.etesync.com) in any way. The history of the original project is kept as it is,
+> with its authors, and the changes of this fork follow it. The app store badges and links below are of the
+> original app; the builds of this fork are on its [releases page](https://github.com/nikossvnk/etesync-notes/releases).
+> Like the original, it's licensed under the GPL-3.0.
+
 Secure, end-to-end encrypted, and privacy-respecting notes application.
 
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
