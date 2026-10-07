@@ -41,7 +41,7 @@ run(async () => {
 
     // A new note opens right away, in the editor, with the cursor in the title
     await A.dismiss();
-    await A.p.getByRole("button", { name: /^new$/i }).locator("visible=true").first().click(); await A.wait(2500);
+    await A.p.getByRole("button", { name: /^new( note)?$/i }).locator("visible=true").first().click(); await A.wait(2500);
     check(`${tag}: "new" opens the note itself`, path() === "/notebook/ID/note/ID", path());
     check(`${tag}: in the editor, with the title being typed in`, await title.count() === 1 && await A.vis("textarea").count() === 1 &&
       await A.p.evaluate(() => document.activeElement?.getAttribute("aria-label")) === "Title");

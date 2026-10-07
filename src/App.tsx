@@ -20,6 +20,7 @@ import { useSelector } from "react-redux";
 import { StoreState } from "./store";
 import { RootStackParamList } from "./RootStackParamList";
 import { DarkTheme, LightTheme } from "./theme";
+import { useWideLayout } from "./components/WideLayout";
 import { useFonts, IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexSans_700Bold } from "@expo-google-fonts/ibm-plex-sans";
 
 enableScreens();
@@ -72,6 +73,7 @@ function InnerApp() {
   const darkModePreference = useSelector((state: StoreState) => state.settings.theme);
   const colorScheme = (darkModePreference === "auto") ? colorScheme_ : darkModePreference;
   const theme = (colorScheme === "dark") ? DarkTheme : LightTheme;
+  const wideLayout = useWideLayout();
   // The font of the app, which is part of it, so this is quick (and it falls back to the system's if it fails)
   const [fontsLoaded, fontsError] = useFonts({ IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexSans_700Bold });
 
@@ -90,6 +92,8 @@ function InnerApp() {
               screenOptions={{
                 headerShown: false,
                 drawerStyle: initRender ? { width: 0 } : undefined,
+                // The sidebar of wide screens has what the drawer has
+                swipeEnabled: !wideLayout,
               }}
             >
               <DrawerNavigation.Screen name="Root" component={RootNavigator} />

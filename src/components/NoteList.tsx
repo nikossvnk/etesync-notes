@@ -54,7 +54,7 @@ export function getSortFunction(sortOrder: string) {
   };
 }
 
-type Entry = CachedItem & { colUid: string, uid: string };
+export type Entry = CachedItem & { colUid: string, uid: string };
 
 // The previews of the notes, by the cache they were made from
 const previews = new WeakMap<Uint8Array, string>();
@@ -72,7 +72,7 @@ function toPreview(content: string) {
     .trim();
 }
 
-function useNotePreview(itemMgr: Etebase.ItemManager | undefined, cache: Uint8Array) {
+export function useNotePreview(itemMgr: Etebase.ItemManager | undefined, cache: Uint8Array) {
   const [preview, setPreview] = React.useState(previews.get(cache));
 
   React.useEffect(() => {

@@ -6,7 +6,7 @@ run(async () => {
   const b = await launch();
   const A = await session(b, "A");
   await A.login();
-  const listed = (name) => A.has(name);
+  const listed = (name) => A.listed(name);
   const onServer = async (name) => (await api.noteNames()).filter((x) => x.endsWith(name));
   const message = async () => ((await A.p.innerText("body")).match(/Empty note discarded/) || ["-"])[0];
   const count = async () => (await api.noteNames()).length;

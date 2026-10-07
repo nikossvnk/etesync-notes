@@ -2,24 +2,29 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { PanResponder, Platform, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
-import { IconButton, Text, TouchableRipple } from "react-native-paper";
+import { Linking, PanResponder, Platform, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
+import { Divider, IconButton, Text, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { NavigationState, StackActions, useNavigation, useNavigationState } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 
 import { StoreState } from "../store";
 import { setSettings } from "../store/actions";
-import { defaultColor, useDeviceBreakpoint } from "../helpers";
+import { defaultColor, serverName } from "../helpers";
 import { cardShadow, fonts, useTheme } from "../theme";
 import { usePendingCount } from "../SyncGate";
-import { getSortFunction } from "./NoteList";
-import { untitled } from "../notes";
+import { useCredentials } from "../credentials";
+import { externalMenuItems, FingerprintDialog } from "../Drawer";
+import LogoutDialog from "./LogoutDialog";
+import Menu from "../widgets/Menu";
+import MenuItem from "../widgets/MenuItem";
+import { useSearchQuery, useWideNavigation } from "./WideLayout";
 
-// The sidebar's width can be changed between these, and always leaves room for the screen next to it
+export { useSidebarShown } from "./WideLayout";
+
+// The sidebar's width can be changed between these, and always leaves room for the columns next to it
 const minWidth = 200;
-const maxWidth = 600;
-const minScreenWidth = 400;
+const maxWidth = 400;
+const minScreenWidth = 720;
 
 function clampWidth(width: number, windowWidth: number) {
   return Math.round(Math.max(minWidth, Math.min(width, maxWidth, windowWidth - minScreenWidth)));
@@ -58,41 +63,18 @@ function useResize(savedWidth: number, save: (width: number) => void) {
   };
 }
 
-// Whether the screens have the sidebar next to them: on wide screens, unless it was hidden
-export function useSidebarShown() {
-  const wide = useDeviceBreakpoint("tabletLandscape");
-  const sidebarVisible = useSelector((state: StoreState) => state.settings.sidebarVisible);
-  return wide && sidebarVisible;
-}
-
-// The screens that belong to a note, so that it's shown as the current one in the tree
-const noteScreens = ["NoteEdit"];
-
-// The state of the stack with the screens, which is inside of the drawer
-function useStackState() {
-  return useNavigationState((state: NavigationState) => {
-    const root = state.routes.find((x) => x.name === "Root");
-    return root?.state as NavigationState | undefined;
-  });
-}
-
-// The notebooks that the user closed in the tree, kept while the app is open
-const collapsedNotebooks = new Set<string>();
-
 interface RowPropsType {
   label: string;
   accessibilityLabel: string;
   selected?: boolean;
-  indent?: number;
   onPress: () => void;
   left?: React.ReactNode;
-  right?: React.ReactNode;
-  dim?: boolean;
+  count?: number;
 }
 
 function Row(props: RowPropsType) {
   const theme = useTheme();
-  const { label, accessibilityLabel, selected, indent = 0, onPress, left, right, dim } = props;
+  const { label, accessibilityLabel, selected, onPress, left, count } = props;
 
   return (
     <TouchableRipple
@@ -102,114 +84,127 @@ function Row(props: RowPropsType) {
       accessibilityState={{ selected: !!selected }}
       // The web doesn't get the state above for buttons
       aria-selected={!!selected}
-      style={[styles.row, { paddingLeft: 6 + indent * 20 }, (selected) ? [{ backgroundColor: theme.colors.surface }, cardShadow] : undefined]}
+      style={[styles.row, (selected) ? [{ backgroundColor: theme.colors.surface }, cardShadow] : undefined]}
     >
       <View style={styles.rowContent}>
         {left}
         <Text
           numberOfLines={1}
           style={[styles.rowLabel, { color: (selected) ? theme.colors.text : theme.colors.textBody },
-            (selected) ? { fontFamily: fonts.medium } : undefined, (dim) ? styles.dim : undefined]}
+            (selected) ? { fontFamily: fonts.medium } : undefined]}
         >
           {label}
         </Text>
-        {right}
+        {(count !== undefined) && <Text style={[styles.count, { color: theme.colors.textMuted }]}>{count}</Text>}
       </View>
     </TouchableRipple>
   );
 }
 
-// A tree of the notebooks and their notes, next to the screens on wide screens
+// The account the app is logged in to, with a menu of what the drawer has on phones
+function Account(props: { onHide: () => void }) {
+  const theme = useTheme();
+  const etebase = useCredentials()!;
+  const { navigate } = useWideNavigation();
+  const syncCount = useSelector((state: StoreState) => state.syncCount);
+  const [showMenu, setShowMenu] = React.useState(false);
+  const [showFingerprint, setShowFingerprint] = React.useState(false);
+  const [showLogout, setShowLogout] = React.useState(false);
+  const username = etebase.user.username;
+
+  return (
+    <View style={styles.account}>
+      <View style={[styles.avatar, { backgroundColor: theme.colors.chipActive }]}>
+        <Text style={[styles.avatarText, { color: theme.colors.onChipActive }]}>{username.slice(0, 2).toUpperCase()}</Text>
+      </View>
+      <View style={styles.accountText}>
+        <Text style={[styles.username, { color: theme.colors.text }]} numberOfLines={1}>{username}</Text>
+        <Text style={[styles.server, { color: theme.colors.textMuted }]} numberOfLines={1} accessibilityLabel={`Server: ${serverName(etebase.serverUrl)}`}>
+          {serverName(etebase.serverUrl)}
+        </Text>
+      </View>
+      <Menu
+        visible={showMenu}
+        onDismiss={() => setShowMenu(false)}
+        anchor={(
+          <IconButton
+            containerColor="transparent"
+            iconColor={theme.colors.textMuted}
+            icon="chevron-down"
+            size={20}
+            style={styles.smallButton}
+            accessibilityLabel="Account menu"
+            onPress={() => setShowMenu(true)}
+          />
+        )}
+      >
+        <MenuItem icon="email-outline" title="Invitations" onPress={() => {
+          setShowMenu(false);
+          navigate("Invitations");
+        }} />
+        <MenuItem icon="fingerprint" title="Show Fingerprint" onPress={() => {
+          setShowMenu(false);
+          setShowFingerprint(true);
+        }} />
+        <MenuItem icon="exit-to-app" title="Logout" disabled={syncCount > 0} onPress={() => {
+          setShowMenu(false);
+          setShowLogout(true);
+        }} />
+        <Divider />
+        {externalMenuItems.map((item) => (
+          <MenuItem key={item.title} icon={item.icon} title={item.title} onPress={() => {
+            setShowMenu(false);
+            Linking.openURL(item.link);
+          }} />
+        ))}
+      </Menu>
+      <IconButton
+        containerColor="transparent"
+        iconColor={theme.colors.textMuted}
+        icon="chevron-double-left"
+        size={20}
+        style={styles.smallButton}
+        accessibilityLabel="Hide the sidebar"
+        onPress={props.onHide}
+      />
+      <FingerprintDialog visible={showFingerprint} onDismiss={() => setShowFingerprint(false)} />
+      <LogoutDialog visible={showLogout} onDismiss={() => setShowLogout(false)} />
+    </View>
+  );
+}
+
+// The first column on wide screens: the account, searching, the notebooks and the settings
 export default function Sidebar() {
   const theme = useTheme();
-  const navigation = useNavigation<any>();
   const dispatch = useDispatch();
-  const stackState = useStackState();
+  const { currentScreen, filterBy, navigate, showNotebook } = useWideNavigation();
+  const { query, setQuery } = useSearchQuery();
   const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
   const cacheItems = useSelector((state: StoreState) => state.cache.items);
-  const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const savedWidth = useSelector((state: StoreState) => state.settings.sidebarWidth);
   const resize = useResize(savedWidth, (sidebarWidth) => dispatch(setSettings({ sidebarWidth }) as any));
-  const [filter, setFilter] = React.useState("");
-  // Changing the set doesn't re-render, so this does
-  const [, setCollapsedVersion] = React.useState(0);
+  const pendingCount = usePendingCount();
+  const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
 
-  const current = stackState?.routes[stackState.index];
-  const currentParams: any = current?.params ?? {};
-  const currentNote = (current && noteScreens.includes(current.name)) ? `${currentParams.colUid}/${currentParams.itemUid}` : undefined;
-  // The notebook whose notes are listed on the main screen
-  const listing = (current?.name === "Home") || (current?.name === "Collection");
-  const filterBy = (viewSettings.filterBy && cacheCollections.has(viewSettings.filterBy)) ? viewSettings.filterBy : undefined;
+  const notebooks = React.useMemo(() => (
+    Array.from(cacheCollections.entries())
+      .map(([colUid, collection]) => ({
+        colUid,
+        name: collection.meta.name ?? "",
+        color: collection.meta.color || defaultColor,
+        count: cacheItems.get(colUid)?.count((x) => !x.isDeleted) ?? 0,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  ), [cacheCollections, cacheItems]);
+  const total = notebooks.reduce((sum, x) => sum + x.count, 0);
+  const searching = query.trim() !== "";
 
-  const notebooks = React.useMemo(() => {
-    const sortFunction = getSortFunction(viewSettings.sortBy);
-    const search = filter.trim().toLowerCase();
-    return Array.from(cacheCollections.entries())
-      .map(([colUid, collection]) => {
-        const notes = Array.from(cacheItems.get(colUid)?.entries() ?? [])
-          .filter(([_uid, item]) => !item.isDeleted)
-          .sort(([_a, a], [_b, b]) => sortFunction(a, b));
-        return {
-          colUid,
-          name: collection.meta.name ?? "",
-          color: collection.meta.color || defaultColor,
-          count: notes.length,
-          notes: (search) ? notes.filter(([_uid, item]) => (item.meta.name ?? "").toLowerCase().includes(search)) : notes,
-        };
-      })
-      .filter((notebook) => !search || (notebook.notes.length > 0) || notebook.name.toLowerCase().includes(search))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [cacheCollections, cacheItems, viewSettings.sortBy, filter]);
-
-  // The notebook of the note that is opened is always open in the tree
-  React.useEffect(() => {
-    if (currentNote) {
-      const colUid = currentNote.split("/")[0];
-      if (collapsedNotebooks.delete(colUid)) {
-        setCollapsedVersion((x) => x + 1);
-      }
-    }
-  }, [currentNote]);
-
-  function toggle(colUid: string) {
-    if (!collapsedNotebooks.delete(colUid)) {
-      collapsedNotebooks.add(colUid);
-    }
-    setCollapsedVersion((x) => x + 1);
-  }
-
-  function showList(colUid: string | undefined) {
-    dispatch(setSettings({
-      viewSettings: {
-        ...viewSettings,
-        filterBy: colUid ?? null,
-      },
-    }) as any);
-    if (!listing) {
-      navigation.navigate("Root", { screen: "Home", pop: true });
-    }
-  }
-
-  function openNote(colUid: string, itemUid: string) {
-    if (currentNote === `${colUid}/${itemUid}`) {
-      return;
-    }
-    // Going from note to note replaces the note, so that the back button goes back to the list
-    // (the stack replaces the screen the action comes from, which has to be passed as it's sent from outside of it)
-    if (stackState && current && (current.name === "NoteEdit")) {
-      navigation.dispatch({ ...StackActions.replace("NoteEdit", { colUid, itemUid }), source: current.key, target: stackState.key });
-    } else {
-      navigation.navigate("Root", { screen: "NoteEdit", params: { colUid, itemUid } });
-    }
-  }
-
-  function setVisible(sidebarVisible: boolean) {
-    dispatch(setSettings({ sidebarVisible }) as any);
+  function show(colUid: string | undefined) {
+    setQuery("");
+    showNotebook(colUid);
   }
 
   const borderColor = theme.colors.border;
-  const pendingCount = usePendingCount();
-  const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
 
   return (
     <View
@@ -218,37 +213,19 @@ export default function Sidebar() {
         // No text gets selected while dragging the edge
         (resize.dragging && (Platform.OS === "web")) ? ({ userSelect: "none" } as any) : undefined]}
     >
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Notebooks</Text>
-        <IconButton
-          containerColor="transparent"
-          iconColor={theme.colors.textMuted}
-          icon="notebook-plus-outline"
-          size={20}
-          accessibilityLabel="New notebook"
-          onPress={() => navigation.navigate("Root", { screen: "CollectionCreate" })}
-        />
-        <IconButton
-          containerColor="transparent"
-          iconColor={theme.colors.textMuted}
-          icon="chevron-double-left"
-          size={20}
-          accessibilityLabel="Hide the sidebar"
-          onPress={() => setVisible(false)}
-        />
-      </View>
+      <Account onHide={() => dispatch(setSettings({ sidebarVisible: false }) as any)} />
       <View style={[styles.search, { borderColor, backgroundColor: theme.colors.surface }]}>
-        <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.inactiveIcon} />
+        <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textMuted} />
         <TextInput
-          value={filter}
-          onChangeText={setFilter}
-          placeholder="Find a note"
-          placeholderTextColor={theme.colors.inactiveIcon}
-          accessibilityLabel="Find a note"
-          style={[styles.searchInput, { color: theme.colors.onSurface }]}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search notes"
+          placeholderTextColor={theme.colors.textMuted}
+          accessibilityLabel="Search notes"
+          style={[styles.searchInput, { color: theme.colors.text }]}
         />
-        {(filter !== "") && (
-          <IconButton containerColor="transparent" iconColor={theme.colors.textMuted} icon="close" size={16} style={styles.smallButton} accessibilityLabel="Clear" onPress={() => setFilter("")} />
+        {searching && (
+          <IconButton containerColor="transparent" iconColor={theme.colors.textMuted} icon="close" size={16} style={styles.smallButton} accessibilityLabel="Clear" onPress={() => setQuery("")} />
         )}
       </View>
       <TouchableRipple
@@ -256,7 +233,7 @@ export default function Sidebar() {
         accessibilityRole="button"
         accessibilityLabel="New note"
         style={[styles.newNote, { backgroundColor: theme.colors.accent }]}
-        onPress={() => navigation.navigate("Root", { screen: "NoteCreate", params: (filterBy) ? { colUid: filterBy } : undefined })}
+        onPress={() => navigate("NoteCreate", (filterBy) ? { colUid: filterBy } : undefined)}
       >
         <View style={styles.newNoteInner}>
           <MaterialCommunityIcons name="plus" size={18} color={theme.colors.onAccent} />
@@ -264,88 +241,49 @@ export default function Sidebar() {
         </View>
       </TouchableRipple>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tree}>
-        {(filter === "") && (
-          <Row
-            label="All notes"
-            accessibilityLabel="All notes"
-            selected={listing && !filterBy}
-            onPress={() => showList(undefined)}
-            left={<MaterialCommunityIcons name="note-multiple-outline" size={18} color={theme.colors.inactiveIcon} style={styles.icon} />}
+        <Row
+          label="All notes"
+          accessibilityLabel="All notes"
+          selected={!searching && !filterBy}
+          onPress={() => show(undefined)}
+          count={total}
+          left={<MaterialCommunityIcons name="note-multiple-outline" size={18} color={theme.colors.textMuted} style={styles.icon} />}
+        />
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Notebooks</Text>
+          <IconButton
+            containerColor="transparent"
+            iconColor={theme.colors.textMuted}
+            icon="plus"
+            size={18}
+            style={styles.smallButton}
+            accessibilityLabel="New notebook"
+            onPress={() => navigate("CollectionCreate")}
           />
-        )}
-        {notebooks.map((notebook) => {
-          // Everything that matches is shown while searching
-          const open = (filter !== "") || !collapsedNotebooks.has(notebook.colUid);
-          return (
-            <React.Fragment key={notebook.colUid}>
-              <Row
-                label={notebook.name}
-                accessibilityLabel={`Notebook ${notebook.name}`}
-                selected={listing && (filterBy === notebook.colUid)}
-                onPress={() => showList(notebook.colUid)}
-                left={(
-                  <>
-                    <IconButton
-                      containerColor="transparent"
-                      iconColor={theme.colors.textMuted}
-                      icon={(open) ? "chevron-down" : "chevron-right"}
-                      size={18}
-                      style={styles.smallButton}
-                      accessibilityLabel={(open) ? `Close ${notebook.name}` : `Open ${notebook.name}`}
-                      onPress={() => toggle(notebook.colUid)}
-                    />
-                    <View style={[styles.color, { backgroundColor: notebook.color }]} />
-                  </>
-                )}
-                right={(
-                  <>
-                    <Text style={[styles.count, { color: theme.colors.textMuted }]}>{notebook.count}</Text>
-                    <IconButton
-                      containerColor="transparent"
-                      iconColor={theme.colors.textMuted}
-                      icon="plus"
-                      size={16}
-                      style={styles.smallButton}
-                      accessibilityLabel={`New note in ${notebook.name}`}
-                      onPress={() => navigation.navigate("Root", { screen: "NoteCreate", params: { colUid: notebook.colUid } })}
-                    />
-                  </>
-                )}
-              />
-              {open && notebook.notes.map(([itemUid, item]) => (
-                <Row
-                  key={itemUid}
-                  label={item.meta.name || untitled}
-                  accessibilityLabel={`Note ${item.meta.name || untitled}`}
-                  indent={1}
-                  selected={currentNote === `${notebook.colUid}/${itemUid}`}
-                  onPress={() => openNote(notebook.colUid, itemUid)}
-                  left={<MaterialCommunityIcons name="note-text-outline" size={16} color={theme.colors.inactiveIcon} style={styles.icon} />}
-                />
-              ))}
-              {open && (notebook.notes.length === 0) && (filter === "") && (
-                <Row label="No notes" accessibilityLabel={`No notes in ${notebook.name}`} indent={1} dim onPress={() => showList(notebook.colUid)} />
-              )}
-            </React.Fragment>
-          );
-        })}
+        </View>
+        {notebooks.map((notebook) => (
+          <Row
+            key={notebook.colUid}
+            label={notebook.name}
+            accessibilityLabel={`Notebook ${notebook.name}`}
+            selected={!searching && (filterBy === notebook.colUid)}
+            onPress={() => show(notebook.colUid)}
+            count={notebook.count}
+            left={<View style={[styles.color, { backgroundColor: notebook.color }]} />}
+          />
+        ))}
         {(notebooks.length === 0) && (
-          <Text style={[styles.empty, styles.dim]}>{(filter !== "") ? "No notes found" : "No notebooks yet"}</Text>
+          <Text style={[styles.empty, { color: theme.colors.textMuted }]}>No notebooks yet</Text>
         )}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: borderColor }]}>
-        <TouchableRipple
-          borderless
-          accessibilityRole="button"
+        <Row
+          label="Settings"
           accessibilityLabel="Settings"
-          style={styles.footerButton}
-          onPress={() => navigation.navigate("Root", { screen: "Settings" })}
-        >
-          <View style={styles.rowContent}>
-            <MaterialCommunityIcons name="cog-outline" size={18} color={theme.colors.textBody} style={styles.icon} />
-            <Text style={[styles.rowLabel, { color: theme.colors.textBody }]}>Settings</Text>
-          </View>
-        </TouchableRipple>
+          selected={currentScreen === "Settings"}
+          onPress={() => navigate("Settings")}
+          left={<MaterialCommunityIcons name="cog-outline" size={18} color={theme.colors.textMuted} style={styles.icon} />}
+        />
         <View style={styles.syncState}>
           <View style={[styles.syncDot, { backgroundColor: (pendingCount > 0) ? theme.colors.disabled : theme.colors.success }]} />
           <Text style={[styles.count, { color: theme.colors.textMuted }]}>
@@ -385,7 +323,7 @@ export function SidebarShowButton() {
 const styles = StyleSheet.create({
   sidebar: {
     borderRightWidth: StyleSheet.hairlineWidth,
-    // Over the screen next to it, which the handle of the edge reaches into
+    // Over the column next to it, which the handle of the edge reaches into
     zIndex: 1,
   },
   // The handle to drag the edge with, over the edge
@@ -401,16 +339,36 @@ const styles = StyleSheet.create({
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingTop: 8,
   },
-  header: {
+  account: {
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 16,
-    paddingTop: 8,
+    paddingRight: 6,
+    paddingTop: 14,
+    paddingBottom: 12,
   },
-  headerTitle: {
-    flex: 1,
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  avatarText: {
     fontFamily: fonts.semibold,
-    fontSize: 15,
+    fontSize: 13,
+  },
+  accountText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  username: {
+    fontFamily: fonts.semibold,
+    fontSize: 14,
+  },
+  server: {
+    fontSize: 12,
   },
   search: {
     flexDirection: "row",
@@ -422,6 +380,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     minHeight: 38,
   },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    // The box around it shows where the text goes already
+    outlineStyle: "none",
+  } as any,
   newNote: {
     marginHorizontal: 12,
     marginBottom: 14,
@@ -442,24 +409,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingBottom: 12,
   },
-  footer: {
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingLeft: 10,
+    marginTop: 16,
+    marginBottom: 2,
   },
-  footerButton: {
+  sectionTitle: {
     flex: 1,
-    minHeight: 36,
-    justifyContent: "center",
-    borderRadius: 8,
-    paddingLeft: 4,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+  },
+  footer: {
+    paddingHorizontal: 8,
+    paddingTop: 6,
+    paddingBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   syncState: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 8,
+    paddingLeft: 12,
+    paddingTop: 4,
   },
   syncDot: {
     width: 7,
@@ -467,18 +441,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 6,
   },
-  searchInput: {
-    flex: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-    fontSize: 14,
-    fontFamily: fonts.regular,
-    // The box around it shows where the text goes already
-    outlineStyle: "none",
-  } as any,
   row: {
-    paddingRight: 4,
-    minHeight: 34,
+    paddingLeft: 10,
+    paddingRight: 10,
+    minHeight: 36,
     justifyContent: "center",
     borderRadius: 8,
   },
@@ -491,8 +457,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   icon: {
-    marginLeft: 6,
-    marginRight: 8,
+    marginRight: 10,
   },
   smallButton: {
     margin: 0,
@@ -501,16 +466,14 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 3,
-    marginRight: 8,
+    marginLeft: 4,
+    marginRight: 12,
   },
   count: {
     fontSize: 12,
-    marginLeft: 4,
-  },
-  dim: {
-    opacity: 0.6,
+    marginLeft: 6,
   },
   empty: {
-    padding: 16,
+    padding: 12,
   },
 });

@@ -301,6 +301,8 @@ const getRules = (content: string, setContent: (value: string) => void): RenderR
           >
             <Checkbox
               status={node.attributes.checked === "true" ? "checked" : "unchecked"}
+              // (Paper doesn't tell the web whether it's ticked)
+              {...{ "aria-checked": node.attributes.checked === "true" }}
               onPress={() => toggleCheckbox(content, node.attributes.startline, node.attributes.endline, setContent)}
             />
             <View style={styles._VIEW_SAFE_bullet_list_content}>{children}</View>

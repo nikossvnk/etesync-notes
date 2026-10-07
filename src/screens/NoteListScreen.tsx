@@ -138,7 +138,7 @@ export default function NoteListScreen(props: PropsType) {
 }
 
 // When there are no notes at all yet
-function EmptyNotes(props: { onCreate: () => void }) {
+export function EmptyNotes(props: { onCreate: () => void }) {
   const theme = useTheme();
 
   return (

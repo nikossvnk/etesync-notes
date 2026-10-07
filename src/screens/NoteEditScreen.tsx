@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import * as Etebase from "etebase";
-import { View, ViewProps, KeyboardAvoidingView, Platform, StyleSheet, TextInput } from "react-native";
+import { View, ViewProps, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, GestureResponderEvent } from "react-native";
 import { Paragraph, Text, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { fonts, useTheme } from "../theme";
@@ -34,6 +34,9 @@ import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
 import { defaultColor, fontFamilies } from "../helpers";
 import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
+import { useWideLayout } from "../components/WideLayout";
+import FormatBar from "../widgets/FormatBar";
+import { Edit } from "../markdownFormat";
 import { canShare, shareItem } from "../import-export";
 
 type NavigationProp = StackNavigationProp<RootStackParamList, "NoteEdit">;
@@ -58,6 +61,12 @@ export default function NoteEditScreen(props: PropsType) {
   const movedRef = React.useRef(false);
   const textInputRef = React.useRef<TextInput>(null);
   const titleInputRef = React.useRef<TextInput>(null);
+  // The selection in the editor, which the formatting buttons change the Markdown around
+  const selectionRef = React.useRef({ start: 0, end: 0 });
+  // A selection the editor is given after formatting, until it reports one of its own
+  const [forcedSelection, setForcedSelection] = React.useState<{ start: number, end: number }>();
+  // Whether the editor takes the focus when it opens, as when the note was clicked to edit it
+  const [focusEditor, setFocusEditor] = React.useState(false);
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const { defaultViewMode, lastViewMode } = viewSettings;
   const { colUid, itemUid } = props.route.params;
@@ -77,6 +86,7 @@ export default function NoteEditScreen(props: PropsType) {
   const navigation = useNavigation<NavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
+  const wideLayout = useWideLayout();
 
   const cacheCollection = (colUid) ? cacheItems.get(colUid) : undefined;
   const cacheItem = (cacheCollection && itemUid) ? cacheCollection.get(itemUid) : undefined;
@@ -108,8 +118,18 @@ export default function NoteEditScreen(props: PropsType) {
     const name = (cacheItem) ? (cacheItem.meta.name || untitled) : "Note Not Found";
     navigation.setOptions({
       title: name,
-      // The title and notebook are in the note itself
-      headerTitle: () => <View style={styles.headerTitle} />,
+      // The title and notebook are in the note itself, wide screens show where it is in the bar
+      headerTitle: () => (
+        <View style={[styles.headerTitle, styles.breadcrumb]}>
+          {(wideLayout && cacheItem) && (
+            <>
+              <Text style={[styles.crumb, { color: theme.colors.textMuted }]} numberOfLines={1}>{cacheCollections.get(colUid)?.meta.name}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.textMuted} />
+              <Text style={[styles.crumb, styles.crumbTitle, { color: theme.colors.text }]} numberOfLines={1}>{cacheItem.meta.name || untitled}</Text>
+            </>
+          )}
+        </View>
+      ),
       headerRight: () => (
         <RightAction
           viewMode={viewMode}
@@ -121,7 +141,7 @@ export default function NoteEditScreen(props: PropsType) {
         />
       ),
     });
-  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, loading]);
+  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, loading, wideLayout, theme]);
 
   // Write the content to the local cache and queue the note to be pushed to the server
   async function saveLocally() {
@@ -300,6 +320,29 @@ export default function NoteEditScreen(props: PropsType) {
     onSaveDo();
   }
 
+  // Formats the Markdown around the selection (from the formatting bar) and selects what it made
+  function applyFormat(apply: (edit: Edit) => Edit) {
+    const { start, end } = selectionRef.current;
+    const result = apply({ text: contentRef.current, start, end });
+    setContent(result.text);
+    selectionRef.current = { start: result.start, end: result.end };
+    setForcedSelection({ start: result.start, end: result.end });
+    textInputRef.current?.focus();
+  }
+
+  // Clicking (or tapping) the note opens it in the editor, but not when text was being selected, or a
+  // link or checkbox was clicked
+  function editOnClick(e: GestureResponderEvent) {
+    if (Platform.OS === "web") {
+      const target = (e.nativeEvent as any).target as HTMLElement | undefined;
+      if (window.getSelection()?.toString() || target?.closest?.("a, input, [role=checkbox], [role=link], [role=button]")) {
+        return;
+      }
+    }
+    setFocusEditor(true);
+    setLastViewMode(false);
+  }
+
   function setLastViewMode(viewMode: boolean) {
     setViewMode(viewMode);
     syncDispatch(setSettings({
@@ -336,6 +379,8 @@ export default function NoteEditScreen(props: PropsType) {
   }
 
   const mtime = cacheItem.meta.mtime;
+  // The note is a sheet, on a darker desk behind it
+  const sheetColors = { backgroundColor: theme.colors.surface, borderColor: theme.colors.border };
   // The notebook and date, and the title, above the note
   const head = (
     <View style={styles.head}>
@@ -358,26 +403,41 @@ export default function NoteEditScreen(props: PropsType) {
   return (
     <>
       {viewMode ? (
-        <ScrollView keyboardAware contentContainerStyle={styles.page}>
-          {head}
-          <View testID="note-viewer" style={styles.viewer}>
-            <Markdown
-              setContent={setContent}
-              content={content}
-            />
-          </View>
+        <ScrollView keyboardAware style={{ backgroundColor: theme.colors.sidebar }} contentContainerStyle={[styles.desk, (wideLayout) && styles.deskWide]}>
+          <Pressable onPress={editOnClick} style={[styles.sheet, styles.viewerPressable, sheetColors]} accessible={false} {...{ tabIndex: -1 }}>
+            {head}
+            <View testID="note-viewer" style={styles.viewer}>
+              <Markdown
+                setContent={setContent}
+                content={content}
+              />
+            </View>
+          </Pressable>
         </ScrollView>
       ) : (
-        <View style={[styles.page, styles.editorPage, { backgroundColor: theme.colors.background }]}>
-          {head}
-          <TextEditor
-            inputRef={textInputRef}
-            style={{ flexGrow: 1 }}
-            contentStyle={styles.editorContent}
-            setContent={setContent}
-            content={content}
-          />
-        </View>
+        <>
+          <FormatBar onFormat={applyFormat} onDone={(wideLayout) ? undefined : () => setLastViewMode(true)} />
+          <View style={[styles.desk, (wideLayout) && styles.deskWide, styles.editorDesk, { backgroundColor: theme.colors.sidebar }]}>
+            <View style={[styles.sheet, styles.editorSheet, sheetColors]}>
+              {head}
+              <TextEditor
+                inputRef={textInputRef}
+                style={{ flexGrow: 1 }}
+                contentStyle={styles.editorContent}
+                setContent={setContent}
+                content={content}
+                autoFocus={focusEditor}
+                selection={forcedSelection}
+                onSelectionChange={(selection) => {
+                  selectionRef.current = selection;
+                  if (forcedSelection) {
+                    setForcedSelection(undefined);
+                  }
+                }}
+              />
+            </View>
+          </View>
+        </>
       )}
       <ConfirmationDialog
         title="Delete Note"
@@ -474,6 +534,9 @@ interface TextEditorPropsType extends ViewProps {
   inputRef?: React.Ref<TextInput>;
   content: string;
   setContent: (value: string) => void;
+  autoFocus?: boolean;
+  selection?: { start: number, end: number };
+  onSelectionChange?: (selection: { start: number, end: number }) => void;
   contentStyle?: ViewProps["style"];
 }
 
@@ -482,13 +545,12 @@ function TextEditor(props: TextEditorPropsType) {
   const fontSize = useSelector((state: StoreState) => state.settings.fontSize);
   const fontFamilyKey = useSelector((state: StoreState) => state.settings.viewSettings.editorFontFamily);
   const fontFamily = fontFamilies[fontFamilyKey];
-  const theme = useTheme();
 
   return (
     <KeyboardAvoidingView
       behavior="padding"
       enabled={(Platform.OS === "ios")}
-      style={[{ backgroundColor: theme.colors.background }, props.style]}
+      style={[{ backgroundColor: "transparent" }, props.style]}
     >
       <RawTextInput
         ref={props.inputRef}
@@ -496,9 +558,12 @@ function TextEditor(props: TextEditorPropsType) {
         textAlignVertical="top"
         multiline
         scrollEnabled
-        style={[{ flexGrow: 1, fontSize, fontFamily }, props.contentStyle]}
+        style={[{ flexGrow: 1, fontSize, fontFamily, backgroundColor: "transparent" }, props.contentStyle]}
         onChangeText={setContent}
         value={content}
+        autoFocus={props.autoFocus}
+        selection={props.selection}
+        onSelectionChange={(e) => props.onSelectionChange?.(e.nativeEvent.selection)}
       />
     </KeyboardAvoidingView>
   );
@@ -607,11 +672,35 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
   },
-  // The note, which isn't wider than is comfortable to read
-  page: {
+  breadcrumb: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingLeft: 8,
+    minWidth: 0,
+  },
+  crumb: {
+    fontSize: 13,
+    flexShrink: 1,
+  },
+  crumbTitle: {
+    fontFamily: fonts.medium,
+  },
+  // What's behind the note, which is a bit darker than it
+  desk: {
+    flexGrow: 1,
+    padding: 10,
+  },
+  deskWide: {
+    padding: 24,
+  },
+  // The note: a sheet that uses the width there is, up to what's still comfortable to read
+  sheet: {
     width: "100%",
-    maxWidth: 760,
+    maxWidth: 1100,
     alignSelf: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
     paddingHorizontal: 22,
     paddingTop: 20,
     paddingBottom: 32,
@@ -620,7 +709,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minHeight: 40,
   },
-  editorPage: {
+  viewerPressable: {
+    flexGrow: 1,
+    cursor: "text",
+  } as any,
+  editorDesk: {
+    flex: 1,
+  },
+  editorSheet: {
     flex: 1,
     paddingBottom: 0,
   },
@@ -628,7 +724,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingTop: 4,
     paddingBottom: 32,
-  },
+    // The page shows where the note is typed already
+    outlineStyle: "none",
+  } as any,
   head: {
     marginBottom: 14,
   },

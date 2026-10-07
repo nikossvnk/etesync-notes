@@ -1,6 +1,5 @@
 import * as React from "react";
-import * as Etebase from "etebase";
-import MiniSearch, { Options, SearchResult } from "minisearch";
+import MiniSearch, { SearchResult } from "minisearch";
 import { findAll } from "highlight-words-core";
 import { FlatList, StyleSheet, View, Text } from "react-native";
 import { List } from "react-native-paper";
@@ -8,9 +7,8 @@ import { fonts, useTheme } from "../theme";
 import { useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 
-import { useCredentials } from "../credentials";
-import { untitled } from "../notes";
 import { useSyncGate } from "../SyncGate";
+import { useNoteSearch } from "../search";
 import { StoreState } from "../store";
 
 import Link from "../widgets/Link";
@@ -18,20 +16,6 @@ import GroupedRow from "../widgets/GroupedRow";
 import { DefaultNavigationProp } from "../RootStackParamList";
 import SearchToolbar from "../widgets/SearchToolbar";
 
-
-type NoteData = { name: string, content: string, id: string };
-
-const msOptions: Options = {
-  fields: ["name", "content"],
-  storeFields: ["name", "content"],
-  searchOptions: {
-    boost: { name: 2 },
-    prefix: true,
-    fuzzy: 0.2,
-    combineWith: "AND",
-  },
-};
-const minisearch = new MiniSearch<NoteData>(msOptions);
 
 type ResultChunk = {
   text: string;
@@ -57,7 +41,7 @@ const MAX_CHARACTERS = 200;
 
 type ResultProps = { text: string, search: string, matches: string[] };
 
-function Result(props: ResultProps) {
+export function Result(props: ResultProps) {
   const { text, search, matches } = props;
   const displayChunks: ResultChunk[] = [];
   let snippet = text;
@@ -158,13 +142,11 @@ type PropsType = {
 
 export default function Search(props: PropsType) {
   const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
-  const cacheItems = useSelector((state: StoreState) => state.cache.items);
-  const etebase = useCredentials()!;
   const syncGate = useSyncGate();
   const theme = useTheme();
   const { active } = props;
   const [value, setValue] = React.useState("");
-  const [entries, setEntries] = React.useState<SearchResult[]>([]);
+  const entries = useNoteSearch(value, !syncGate);
   const navigation = useNavigation<DefaultNavigationProp>();
 
   React.useEffect(() => {
@@ -181,48 +163,6 @@ export default function Search(props: PropsType) {
       ),
     });
   }, [active, navigation, cacheCollections, value]);
-
-  React.useEffect(() => {
-    if (syncGate) {
-      return;
-    }
-    
-    (async () => {
-      const notesList: NoteData[] = [];
-      const colMgr = etebase.getCollectionManager();
-
-      for (const [colUid, itemsList] of cacheItems.entries()) {
-        const col = colMgr.cacheLoad(cacheCollections.get(colUid)!.cache);
-        const itemMgr = colMgr.getItemManager(col);
-
-        for (const [uid, cachedItem] of itemsList.entries()) {
-          if (cachedItem.isDeleted) {
-            continue;
-          }
-          const item = itemMgr.cacheLoad(cachedItem.cache);
-          // FIXME We need to remove the markdown formatting and the repeated new lines to have nicer results
-          const content = await item.getContent(Etebase.OutputFormat.String);
-
-          notesList.push({ name: cachedItem.meta.name || untitled, content, id: `${colUid}:${uid}` });
-        }
-      }
-      minisearch.removeAll();
-      minisearch.addAll(notesList);
-    })();
-  }, [syncGate, cacheCollections, cacheItems]);
-
-  React.useEffect(() => {
-    if (syncGate) {
-      return;
-    }
-
-    if (value && minisearch.documentCount > 0) {
-      const results = minisearch.search(value);
-      setEntries(results);
-    } else if (entries.length > 0) {
-      setEntries([]);
-    }
-  }, [syncGate, cacheCollections, cacheItems, value]);
 
   if (syncGate) {
     return syncGate;

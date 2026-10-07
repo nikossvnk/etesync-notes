@@ -41,7 +41,7 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-const externalMenuItems = [
+export const externalMenuItems = [
   {
     title: "Report issue",
     link: C.reportIssue,
@@ -71,7 +71,7 @@ if (!C.genericMode) {
   );
 }
 
-function FingerprintDialog(props: { visible: boolean, onDismiss: () => void }) {
+export function FingerprintDialog(props: { visible: boolean, onDismiss: () => void }) {
   const etebase = useCredentials()!;
 
   if (!props.visible) {

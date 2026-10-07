@@ -107,6 +107,16 @@ exports.api = {
     await colMgr.upload(col);
     return col;
   },
+  // Changes the content of the note with the name in the notebook, directly on the server
+  async setNoteContent(notebookName, name, content) {
+    const etebase = await this.login();
+    const col = await this.notebook(etebase, notebookName);
+    const itemMgr = etebase.getCollectionManager().getItemManager(col);
+    const item = (await this.items(etebase, col)).find((x) => !x.isDeleted && x.getMeta().name === name);
+    await item.setContent(content);
+    await itemMgr.batch([item]);
+    await etebase.logout();
+  },
   // Adds a note (and its notebook, if needed) directly on the server
   async addNote(notebookName, name, content) {
     const etebase = await this.login();
@@ -179,13 +189,28 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
   };
   s.sync = async () => { await btn(/^sync/i).click(); await wait(5000); };
   s.has = async (str) => (await text()).includes(str);
+  // Whether the list shows a note with the name, scrolling through it (it only has the rows it
+  // scrolled to), and back to the top
+  s.listed = async (name) => {
+    await p.mouse.move(p.viewportSize().width / 2, p.viewportSize().height / 2);
+    let found = false;
+    for (let i = 0; (i < 40) && !found; i++) {
+      found = await s.has(name);
+      if (!found) {
+        await p.mouse.wheel(0, 600); await wait(250);
+      }
+    }
+    await p.mouse.wheel(0, -100000); await wait(300);
+    return found;
+  };
   s.syncLabel = () => p.evaluate(() => [...document.querySelectorAll('[aria-label^="Sync"]')].filter((e) => e.offsetParent).map((e) => e.getAttribute("aria-label")).join("|"));
   s.shot = (name) => p.screenshot({ path: `${name}-${tag}.png` });
 
   // Creates a note with the "New" button of the notes list, which opens it in the editor, with the
   // title (if any) typed in, and in the given notebook (or the preselected one)
   s.createNote = async (name, notebook) => {
-    await btn(/^new$/i).click(); await wait(2500);
+    // ("New note" in the sidebar of wide screens)
+    await btn(/^new( note)?$/i).click(); await wait(2500);
     if (name) {
       await vis('input[aria-label="Title"]').fill(name); await wait(300);
     }

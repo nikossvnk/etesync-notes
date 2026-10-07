@@ -1,4 +1,4 @@
-// Wide screens: the actions of the screens are buttons in their bars, not in a menu
+// Wide screens: the actions of the screens are buttons in their bars (and above the notes), not in a menu
 const { launch, session, run, check, api, unique, config } = require("../lib");
 run(async () => {
   const n = unique();
@@ -66,7 +66,7 @@ run(async () => {
   check("and goes back to the list", path() === "/", path());
 
   // Narrow screens keep the menu (the note is opened by its address, as the list is long)
-  await sidebar.getByRole("button", { name: "Note Zebra " + n, exact: true }).click(); await A.wait(2000);
+  await A.p.locator(`[data-testid="notes-column"] a[href*="/note/"] [aria-label="Zebra ${n}"] >> visible=true`).first().click(); await A.wait(2000);
   const zebra = new URL(A.p.url()).pathname;
   const narrow = await session(b, "narrow");
   await narrow.login();

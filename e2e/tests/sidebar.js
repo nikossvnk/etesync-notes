@@ -1,94 +1,106 @@
-// Wide screens: the sidebar with the notebooks and their notes
+// Wide screens: three columns, the sidebar (account, search, notebooks, settings), the notes, and the
+// open note. There's no drawer, the sidebar has what it has.
 const { launch, session, run, check, api, unique } = require("../lib");
 run(async () => {
   const n = unique();
   const other = "Sidebar " + n;
   await api.addNote("My Notes", "First " + n, "the first note");
   await api.addNote("My Notes", "Second " + n, "the second note");
-  await api.addNote(other, "Third " + n, "the third note");
+  await api.addNote(other, "Third " + n, "the third note, about kiwis" + n);
   const b = await launch();
 
-  // Not on narrow screens
+  // Not on narrow screens, which have the drawer
   const narrow = await session(b, "narrow");
   await narrow.login();
-  check("no sidebar on a narrow screen", await narrow.p.locator('[data-testid="sidebar"] >> visible=true').count() === 0);
+  check("no sidebar or notes column on a narrow screen", await narrow.p.locator('[data-testid="sidebar"] >> visible=true').count() === 0 &&
+    await narrow.p.locator('[data-testid="notes-column"] >> visible=true').count() === 0);
+  check("but the menu button of the drawer", await narrow.btn(/^main menu$/i).count() === 1);
   await narrow.ctx.close();
 
   const A = await session(b, "A", { width: 1280, height: 800 });
   await A.login();
   const sidebar = A.p.locator('[data-testid="sidebar"] >> visible=true');
+  const column = A.p.locator('[data-testid="notes-column"] >> visible=true');
   const row = (label) => sidebar.getByRole("button", { name: label, exact: true });
   const shown = async (label) => (await row(label).count()) > 0;
   const selected = async (label) => (await row(label).getAttribute("aria-selected")) === "true";
   const path = () => new URL(A.p.url()).pathname.replace(/[A-Za-z0-9_-]{32}/g, "ID");
-  // The cards of the notes list, which has the notes of all notebooks or of one
-  const cards = () => A.p.locator('[aria-label] >> visible=true').evaluateAll((els) => els
-    .filter((e) => !e.closest('[data-testid="sidebar"]') && e.closest('a[href*="/note/"]'))
-    .map((e) => e.getAttribute("aria-label")));
+  // The notes in the notes column, in their order, and the one that is selected
+  const notes = () => column.locator("a[href*='/note/'] [aria-label]").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
+  const note = (name) => column.locator(`a[href*='/note/'] [aria-label="${name}"]`).first();
+  const noteSelected = async (name) => (await note(name).getAttribute("aria-selected")) === "true";
 
-  check("the sidebar is shown on a wide screen", await sidebar.count() === 1);
-  check("with the notebooks", await shown("Notebook My Notes") && await shown("Notebook " + other));
-  check("and their notes", await shown("Note First " + n) && await shown("Note Second " + n) && await shown("Note Third " + n));
-  check("the notebook filter above the list isn't shown next to it", await A.p.getByRole("button", { name: /^Filter: / }).locator("visible=true").count() === 0);
+  check("the sidebar and the notes are shown on a wide screen", await sidebar.count() === 1 && await column.count() === 1);
+  check("there's no drawer menu button", await A.btn(/^main menu$/i).count() === 0);
+  check("the sidebar shows the account", (await sidebar.innerText()).includes("e2e-tester"));
+  check("and the notebooks", await shown("Notebook My Notes") && await shown("Notebook " + other));
+  const allNotes = await notes();
+  check("the notes column lists the notes of all notebooks", allNotes.includes("First " + n) && allNotes.includes("Third " + n), allNotes);
+  check("next to it nothing is open yet", (await A.p.getByText("No note open").locator("visible=true").count()) === 1);
 
-  // Opening notes
-  await row("Note First " + n).click(); await A.wait(2500);
-  check("a note opens from the sidebar", path() === "/notebook/ID/note/ID" && (await A.viewerText()).includes("the first note"));
-  check("and is the selected one", await selected("Note First " + n) && !(await selected("Note Second " + n)));
-  await row("Note Third " + n).click(); await A.wait(2500);
-  check("another note opens in its place", (await A.viewerText()).includes("the third note") && await selected("Note Third " + n));
+  // What the drawer has is in the account's menu, and the settings at the bottom
+  await row("Account menu").click(); await A.wait(800);
+  for (const item of ["Invitations", "Show Fingerprint", "Logout", "Report issue", "Contact developer"]) {
+    check(`the account menu has ${item}`, await A.p.getByText(item, { exact: true }).locator("visible=true").count() > 0);
+  }
+  await A.p.getByRole("menuitem", { name: "Invitations" }).locator("visible=true").first().click(); await A.wait(1500);
+  check("invitations opens them next to the columns", path() === "/invitations" && await column.count() === 1, path());
+  await row("Settings").click(); await A.wait(1500);
+  check("settings opens them next to the columns", path() === "/settings" && await column.count() === 1, path());
+
+  // Opening notes from the column
+  await note("First " + n).click(); await A.wait(2500);
+  check("a note opens from the column", path() === "/notebook/ID/note/ID" && (await A.viewerText()).includes("the first note"));
+  check("and is the selected one", await noteSelected("First " + n) && !(await noteSelected("Second " + n)));
+  check("the bar shows its notebook and title", (await A.p.locator("text=My Notes >> visible=true").count()) > 0);
+  await note("Third " + n).click(); await A.wait(2500);
+  check("another note opens in its place", (await A.viewerText()).includes("the third note") && await noteSelected("Third " + n));
   await A.back();
-  check("back goes to the list, not to the note before", path() === "/", path());
+  check("back closes it, not going to the note before", path() === "/" && (await A.p.getByText("No note open").locator("visible=true").count()) === 1, path());
 
-  // Changes are saved when going to another note from the sidebar
-  await row("Note Second " + n).click(); await A.wait(2500);
+  // Changes are saved when going to another note
+  await note("Second " + n).click(); await A.wait(2500);
   await (await A.editor()).fill("the second note, changed"); await A.wait(500);
-  await row("Note First " + n).click(); await A.wait(6000);
+  await note("First " + n).click(); await A.wait(6000);
   const second = () => api.noteContent("My Notes", "Second " + n);
-  check("an edited note is saved when another one is opened from the sidebar", (await second()) === "the second note, changed",
+  check("an edited note is saved when another one is opened", (await second()) === "the second note, changed",
     [await second(), (await api.noteNames()).filter((x) => x.includes(n))]);
 
-  // A new note that's left empty for another note is thrown away
-  const notesBefore = (await api.noteNames()).length;
-  await row("New note in " + other).click(); await A.wait(2500);
-  check("a new note from the sidebar is in its notebook", (await A.notebookOfNote()) === other, await A.notebookOfNote());
-  check("the new note is in the sidebar", await shown("Note Untitled"));
-  await row("Note Third " + n).click(); await A.wait(4000);
-  check("left empty for another note: thrown away", !(await shown("Note Untitled")) && (await A.viewerText()).includes("the third note"));
-  check("and not on the server", (await api.noteNames()).length === notesBefore);
-
-  // A notebook shows its notes in the list
-  await row("Notebook " + other).click(); await A.wait(2500);
-  check("a notebook opens the list of its notes", path() === "/" && JSON.stringify(await cards()) === JSON.stringify(["Third " + n]), [path(), await cards()]);
+  // A notebook shows its notes in the column
+  await row("Notebook " + other).click(); await A.wait(2000);
+  check("a notebook lists its notes", JSON.stringify(await notes()) === JSON.stringify(["Third " + n]), await notes());
   check("and is the selected one", await selected("Notebook " + other) && !(await selected("All notes")));
+  check("with its name above them", (await column.innerText()).includes(other));
+
+  // A new note is in the chosen notebook, and thrown away when it's left empty
+  const notesBefore = (await api.noteNames()).length;
+  await row("New note").click(); await A.wait(2500);
+  check("a new note is in the chosen notebook", (await A.notebookOfNote()) === other, await A.notebookOfNote());
+  check("with the title being typed in", await A.p.evaluate(() => document.activeElement?.getAttribute("aria-label")) === "Title");
+  await note("Third " + n).click(); await A.wait(4000);
+  check("left empty for another note: thrown away", !(await notes()).includes("Untitled") && (await A.viewerText()).includes("the third note"));
+  check("and not on the server", (await api.noteNames()).length === notesBefore);
   await row("All notes").click(); await A.wait(1500);
-  const all = await cards();
-  check("all notes lists the notes of all notebooks", all.includes("First " + n) && all.includes("Third " + n), all);
+  check("all notes lists all of them again", (await notes()).includes("First " + n) && await selected("All notes"));
 
-  // Closing and opening a notebook
-  await row("Close " + other).click(); await A.wait(500);
-  check("a closed notebook doesn't show its notes", !(await shown("Note Third " + n)) && await shown("Note First " + n));
-  await row("Open " + other).click(); await A.wait(500);
-  check("opened again it does", await shown("Note Third " + n));
+  // Searching the titles and contents
+  const search = A.p.locator('input[aria-label="Search notes"] >> visible=true');
+  await search.fill("kiwis" + n); await A.wait(2500);
+  check("searching finds a note by its content", JSON.stringify(await notes()) === JSON.stringify(["Third " + n]), await notes());
+  await search.fill("Second " + n); await A.wait(1500);
+  check("and by its title", (await notes()).includes("Second " + n) && !(await notes()).includes("Third " + n), await notes());
+  await search.fill("nothinglikethis" + n); await A.wait(1500);
+  check("and says so when nothing matches", (await column.innerText()).includes("No notes match"));
+  await sidebar.getByRole("button", { name: "Clear" }).click(); await A.wait(800);
+  check("clearing it lists the notes again", (await notes()).includes("First " + n) && (await notes()).includes("Third " + n));
 
-  // Finding notes
-  const find = A.p.locator('input[aria-label="Find a note"] >> visible=true');
-  await find.fill("third " + n); await A.wait(500);
-  check("finding a note shows only the notes that match", await shown("Note Third " + n) && !(await shown("Note First " + n)) && !(await shown("Notebook My Notes")));
-  await row("Close " + other).click().catch(() => {}); await A.wait(300);
-  await find.fill("nothing like this " + n); await A.wait(500);
-  check("and says so when nothing matches", (await sidebar.innerText()).includes("No notes found"));
-  await sidebar.getByRole("button", { name: "Clear" }).click(); await A.wait(500);
-  check("clearing it shows everything again", await shown("Note First " + n) && await shown("Notebook " + other));
-
-  // Hiding it, which is remembered
+  // Hiding it, which is remembered, the notes stay
   await row("Hide the sidebar").click(); await A.wait(800);
-  check("the sidebar can be hidden", await sidebar.count() === 0);
-  check("then the notebook filter is back above the list", await A.p.getByRole("button", { name: /^Filter: / }).locator("visible=true").count() > 0);
+  check("the sidebar can be hidden", await sidebar.count() === 0 && await column.count() === 1);
   await A.p.reload(); await A.wait(6000);
   check("it stays hidden after reloading", await sidebar.count() === 0);
   await A.btn(/^show the sidebar$/i).click(); await A.wait(800);
-  check("and can be shown again", await sidebar.count() === 1 && await shown("Note First " + n));
+  check("and can be shown again", await sidebar.count() === 1 && await shown("Notebook " + other));
 
   // Changing its width by dragging its edge, which is remembered
   const width = async () => Math.round((await sidebar.boundingBox()).width);
@@ -100,17 +112,16 @@ run(async () => {
     await A.p.mouse.up(); await A.wait(800);
   };
   const before = await width();
-  await drag(120);
-  check("dragging the edge makes the sidebar wider", Math.abs((await width()) - (before + 120)) <= 2, [before, await width()]);
-  const cardsLeft = async () => Math.round((await A.p.locator('a[href*="/note/"] >> visible=true').first().boundingBox()).x);
-  check("and the screen next to it narrower", (await cardsLeft()) > before + 120, await cardsLeft());
+  await drag(80);
+  check("dragging the edge makes the sidebar wider", Math.abs((await width()) - (before + 80)) <= 2, [before, await width()]);
+  check("and moves the notes column", Math.round((await column.boundingBox()).x) >= before + 78, (await column.boundingBox()).x);
   await A.p.reload(); await A.wait(6000);
-  check("the width stays after reloading", Math.abs((await width()) - (before + 120)) <= 2, await width());
+  check("the width stays after reloading", Math.abs((await width()) - (before + 80)) <= 2, await width());
   await drag(-1000);
   check("it doesn't get narrower than 200 pixels", (await width()) === 200, await width());
   await drag(2000);
-  check("or wider than 600", (await width()) === 600, await width());
-  await drag(before - 600);
+  check("or wider than 400", (await width()) === 400, await width());
+  await drag(before - 400);
   check("and can be dragged back", Math.abs((await width()) - before) <= 2, await width());
 
   // New notebook
