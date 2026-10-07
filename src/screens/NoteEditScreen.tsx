@@ -421,7 +421,8 @@ export default function NoteEditScreen(props: PropsType) {
               <TextEditor
                 inputRef={textInputRef}
                 style={{ flexGrow: 1 }}
-                contentStyle={styles.editorContent}
+                // The body is a shade off the sheet, so that it's told apart from the title
+                contentStyle={[styles.editorContent, { backgroundColor: theme.colors.background }]}
                 setContent={setContent}
                 content={content}
                 autoFocus={focusEditor}
@@ -556,7 +557,7 @@ function NoteTitle(props: NoteTitlePropsType) {
       autoFocus={autoFocus}
       returnKeyType="next"
       onSubmitEditing={onSubmit}
-      style={[styles.title, styles.titleInput, { color: theme.colors.text }]}
+      style={[styles.title, styles.titleInput, { color: theme.colors.text, borderBottomColor: theme.colors.divider }]}
     />
   );
 }
@@ -678,9 +679,11 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   editorContent: {
-    paddingHorizontal: 0,
-    paddingTop: 4,
+    paddingHorizontal: 12,
+    paddingTop: 10,
     paddingBottom: 32,
+    marginBottom: 16,
+    borderRadius: 10,
     // The page shows where the note is typed already
     outlineStyle: "none",
   } as any,
@@ -703,10 +706,13 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     letterSpacing: -0.5,
   },
+  // In the editor the title has a line under it, between it and the body
   titleInput: {
     padding: 0,
+    paddingBottom: 8,
     minWidth: 0,
     borderWidth: 0,
+    borderBottomWidth: 1,
     outlineStyle: "none",
   } as any,
   notebookWrap: {
