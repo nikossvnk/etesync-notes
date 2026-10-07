@@ -14,11 +14,9 @@ import { useSyncGate } from "../SyncGate";
 import { StoreState } from "../store";
 import { CachedItem } from "../store/reducers";
 import Container from "../widgets/Container";
-import Menu from "../widgets/Menu";
 import { Title } from "../widgets/Typography";
 import NotFound from "../widgets/NotFound";
-import AppbarAction from "../widgets/AppbarAction";
-import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
+import AppbarButton from "../widgets/AppbarButton";
 
 import { defaultColor } from "../helpers";
 import { DefaultNavigationProp, RootStackParamList } from "../RootStackParamList";
@@ -116,40 +114,13 @@ export default function CollectionChangelogScreen(props: PropsType) {
 }
 
 function RightAction(props: { colUid: string }) {
-  const [showMenu, setShowMenu] = React.useState(false);
   const navigation = useNavigation<DefaultNavigationProp>();
-  const wide = useWideAppbar();
   const colUid = props.colUid;
 
-  if (wide) {
-    return (
-      <View style={{ flexDirection: "row" }}>
-        <AppbarButton icon="pencil" title="Edit" onPress={() => navigation.navigate("CollectionEdit", { colUid })} />
-        <AppbarButton icon="account-multiple" title="Members" onPress={() => navigation.navigate("CollectionMembers", { colUid })} />
-      </View>
-    );
-  }
-
   return (
-    <Menu
-      visible={showMenu}
-      onDismiss={() => setShowMenu(false)}
-      anchor={(
-        <AppbarAction icon="dots-vertical" accessibilityLabel="Menu" onPress={() => setShowMenu(true)} />
-      )}
-    >
-      <Menu.Item leadingIcon="pencil" title="Edit"
-        onPress={() => {
-          setShowMenu(false);
-          navigation.navigate("CollectionEdit", { colUid });
-        }}
-      />
-      <Menu.Item leadingIcon="account-multiple" title="Members"
-        onPress={() => {
-          setShowMenu(false);
-          navigation.navigate("CollectionMembers", { colUid });
-        }}
-      />
-    </Menu>
+    <View style={{ flexDirection: "row" }}>
+      <AppbarButton icon="pencil" title="Edit" onPress={() => navigation.navigate("CollectionEdit", { colUid })} />
+      <AppbarButton icon="account-multiple" title="Members" onPress={() => navigation.navigate("CollectionMembers", { colUid })} />
+    </View>
   );
 }

@@ -106,14 +106,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   done: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     justifyContent: "center",
     marginLeft: 6,
   },
   doneText: {
     fontFamily: fonts.semibold,
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 16,
   },
 });

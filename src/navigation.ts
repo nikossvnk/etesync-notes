@@ -21,7 +21,8 @@ const notebook = ({ colUid }: any) => ({ colUid });
 // The level above each screen, which is where the back button leads to.
 // Screens that are not here are top level screens.
 const upTargets: { [name in RouteName]?: UpTarget } = {
-  Collection: { names: ["Home"] },
+  Collection: { names: ["Notebooks", "Home"] },
+  Search: { names: ["Home"] },
   NoteCreate: { names: lists },
   NoteEdit: { names: lists },
   NoteProps: { names: ["NoteEdit"], params: note },

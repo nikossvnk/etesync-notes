@@ -21,12 +21,25 @@ run(async () => {
     check(label, w.path === path && w.back === backShown && w.menu === !backShown, w);
   };
   const back = async () => { await A.dismiss(); await A.p.getByRole("button", { name: /^back$/i }).locator("visible=true").last().click(); await A.wait(1500); };
+  // The actions of the screens are buttons in their bars
   const menu = async (item) => {
-    await A.p.getByRole("button", { name: /^menu$/i }).locator("visible=true").last().click(); await A.wait(800);
-    await A.p.getByText(item, { exact: true }).locator("visible=true").last().click({ force: true }); await A.wait(1500);
+    await A.p.getByRole("button", { name: item, exact: true }).locator("visible=true").last().click(); await A.wait(1500);
   };
 
   await at("home has the menu button, no back button", "/", false);
+  check("there's no bar of tabs at the bottom", await A.p.getByRole("tab").locator("visible=true").count() === 0);
+
+  // The search is opened from the field above the notes, and finds notes by their content
+  await A.tab("Search"); await at("the search field opens the search", "/search", true);
+  check("with the cursor in the search", await A.p.evaluate(() => document.activeElement?.getAttribute("placeholder")) === "Search");
+  await A.p.locator('input[placeholder="Search"] >> visible=true').fill("for the navigation test"); await A.wait(2500);
+  check("the search finds the note", (await A.text()).includes(note));
+  await back(); await at("back: home", "/", false);
+
+  // The notebooks are in the menu
+  await A.tab("Notebooks"); await at("the menu opens the notebooks", "/notebooks", false);
+  check("which lists them", (await A.text()).includes("My Notes"));
+  await A.tab("Notes"); await at("and the notes", "/", false);
   await A.open(note); await at("a note", "/notebook/ID/note/ID", true);
   await back(); await at("back from the note: home", "/", false);
 
@@ -49,7 +62,7 @@ run(async () => {
   await A.p.locator('input[aria-label="Display name (title)"] >> visible=true').last().fill("Nav " + n);
   await A.p.getByRole("button", { name: /^save$/i }).locator("visible=true").last().click(); await A.wait(4000);
   await at("the new notebook", "/notebook/ID", true);
-  await back(); await back(); await at("back twice: home", "/", false);
+  await back(); await back(); await at("back twice: the notebooks", "/notebooks", false);
 
   // Moving a note: the moved note replaces the one it was moved from
   await A.tab("Notes");
@@ -74,7 +87,7 @@ run(async () => {
   await A.p.getByRole("button", { name: /^ok$/i }).locator("visible=true").last().click(); await A.wait(3000);
   await at("deleted: home", "/", false);
   const t = await A.text();
-  check("the notebooks are shown, without the deleted one", t.includes("Notebooks") && !t.includes("Nav " + n));
+  check("the notes are shown, without the deleted notebook", t.includes("Notes") && !t.includes("Nav " + n));
   check("no \"can't be found\" page", !/can.t be found/.test(t));
   await b.close();
 });

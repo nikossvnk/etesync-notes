@@ -26,11 +26,9 @@ import { newNotes, openInEditor } from "../newNotes";
 import { moveNote, nameFromContent, noteName, untitled } from "../notes";
 import { requestSync, saveItemsLocally } from "../sync/SyncManager";
 import LoadingIndicator from "../widgets/LoadingIndicator";
-import Menu from "../widgets/Menu";
 import ConfirmationDialog from "../widgets/ConfirmationDialog";
 import NotFound from "../widgets/NotFound";
-import AppbarAction from "../widgets/AppbarAction";
-import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
+import AppbarButton from "../widgets/AppbarButton";
 import { defaultColor, fontFamilies } from "../helpers";
 import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
@@ -476,56 +474,15 @@ interface RightActionViewProps {
 }
 
 function RightAction({ viewMode, setViewMode, onSave, onDelete, onShare, changed }: RightActionViewProps) {
-  const [showMenu, setShowMenu] = React.useState(false);
-  const wide = useWideAppbar();
-
-  if (wide) {
-    return (
-      <View style={{ flexDirection: "row" }}>
-        <AppbarButton icon={viewMode ? "pencil" : "eye"} title="View mode" onPress={() => setViewMode(!viewMode)} />
-        <AppbarButton icon="content-save" title="Save" disabled={!changed} onPress={onSave} />
-        {(canShare()) ? (
-          <AppbarButton icon="share-variant" title="Share" onPress={onShare} />
-        ) : null}
-        <AppbarButton icon="delete" title="Delete" onPress={onDelete} />
-      </View>
-    );
-  }
 
   return (
     <View style={{ flexDirection: "row" }}>
-      <AppbarAction icon={viewMode ? "pencil" : "eye"} accessibilityLabel="View mode" onPress={() => {
-        setViewMode(!viewMode);
-      }} />
-      <Menu
-        visible={showMenu}
-        onDismiss={() => setShowMenu(false)}
-        anchor={(
-          <AppbarAction icon="dots-vertical" accessibilityLabel="Menu" onPress={() => setShowMenu(true)} />
-        )}
-      >
-        <Menu.Item leadingIcon="delete" title="Delete"
-          onPress={() => {
-            setShowMenu(false);
-            onDelete();
-          }}
-        />
-        <Menu.Item leadingIcon="content-save" title="Save"
-          disabled={!changed}
-          onPress={() => {
-            setShowMenu(false);
-            onSave();
-          }}
-        />
-        {(canShare()) ? (
-          <Menu.Item leadingIcon="share-variant" title="Share"
-            onPress={() => {
-              setShowMenu(false);
-              onShare();
-            }}
-          />
-        ) : null}
-      </Menu>
+      <AppbarButton icon={viewMode ? "pencil" : "eye"} title="View mode" onPress={() => setViewMode(!viewMode)} />
+      <AppbarButton icon="content-save" title="Save" disabled={!changed} onPress={onSave} />
+      {(canShare()) ? (
+        <AppbarButton icon="share-variant" title="Share" onPress={onShare} />
+      ) : null}
+      <AppbarButton icon="delete" title="Delete" onPress={onDelete} />
     </View>
   );
 }

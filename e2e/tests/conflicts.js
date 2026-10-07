@@ -48,8 +48,7 @@ run(async () => {
   // Deleted offline, then reconnected
   await A.ctx.setOffline(true); await A.wait(500);
   await A.open(name + " (conflict copy)");
-  await A.btn(/^menu$/i).click(); await A.wait(800);
-  await A.vis('text="Delete"').click({ force: true }); await A.wait(800);
+  await A.btn(/^delete$/i).click(); await A.wait(800);
   await A.btn(/^ok$/i).click(); await A.wait(2500);
   check("deleted offline, it's gone from the list", !(await A.has(name + " (conflict copy)")));
   check("the deletion waits to be uploaded", (await A.syncLabel()).includes("1 not uploaded"), await A.syncLabel());

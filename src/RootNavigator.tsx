@@ -15,7 +15,7 @@ import SettingsScreen from "./screens/SettingsScreen";
 import AboutScreen from "./screens/AboutScreen";
 import ChangePasswordScreen from "./screens/ChangePasswordScreen";
 import DebugLogsScreen from "./screens/DebugLogsScreen";
-import HomeScreen from "./screens/HomeScreen";
+import HomeScreen, { NotebooksRoute, SearchRoute } from "./screens/HomeScreen";
 import NoteEditScreen from "./screens/NoteEditScreen";
 import NoteCreateScreen from "./screens/NoteCreateScreen";
 import NoteRedirectScreen from "./screens/NoteRedirectScreen";
@@ -40,6 +40,7 @@ import Sidebar, { SidebarShowButton } from "./components/Sidebar";
 import NotesColumn from "./components/NotesColumn";
 import { SearchProvider, useWideLayout } from "./components/WideLayout";
 import { useTheme } from "./theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -50,6 +51,7 @@ export default React.memo(function RootNavigator() {
   const wideLayout = useWideLayout();
   const sidebarVisible = useSelector((state: StoreState) => state.settings.sidebarVisible);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   // Sync app when it goes to background
   useAppStateCb(React.useCallback((_foreground) => {
@@ -81,7 +83,8 @@ export default React.memo(function RootNavigator() {
 
   return (
     <SearchProvider>
-      <View style={{ flex: 1, flexDirection: "row" }}>
+      {/* Above the system's navigation bar (on Android the app is drawn behind it) */}
+      <View style={{ flex: 1, flexDirection: "row", paddingBottom: insets.bottom, backgroundColor: theme.colors.background }}>
         {wideLayout && ((sidebarVisible) ? <Sidebar /> : <SidebarShowButton />)}
         {wideLayout && <NotesColumn />}
         <View style={{ flex: 1 }}>
@@ -131,8 +134,19 @@ export default React.memo(function RootNavigator() {
                   }}
                 />
                 <Stack.Screen
+                  name="Search"
+                  component={SearchRoute}
+                />
+                <Stack.Screen
+                  name="Notebooks"
+                  component={NotebooksRoute}
+                  options={{
+                    title: "Notebooks",
+                  }}
+                />
+                <Stack.Screen
                   name="Collection"
-                  component={HomeScreen}
+                  component={NotebooksRoute}
                   options={{
                     title: C.appName,
                     headerLeft: () => (

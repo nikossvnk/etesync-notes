@@ -1,4 +1,4 @@
-// Wide screens: the actions of the screens are buttons in their bars (and above the notes), not in a menu
+// The actions of the screens are buttons in their bars (and above the notes on wide screens), not in a menu
 const { launch, session, run, check, api, unique, config } = require("../lib");
 run(async () => {
   const n = unique();
@@ -65,14 +65,14 @@ run(async () => {
   check("delete deletes the note", (await api.noteNames()).includes("DELETED:Apple " + n), (await api.noteNames()).filter((x) => x.endsWith("Apple " + n)));
   check("and goes back to the list", path() === "/", path());
 
-  // Narrow screens keep the menu (the note is opened by its address, as the list is long)
+  // Narrow screens too (the note is opened by its address, as the list is long)
   await A.p.locator(`[data-testid="notes-column"] a[href*="/note/"] [aria-label="Zebra ${n}"] >> visible=true`).first().click(); await A.wait(2000);
   const zebra = new URL(A.p.url()).pathname;
   const narrow = await session(b, "narrow");
   await narrow.login();
   await narrow.p.goto(config.appUrl + zebra); await narrow.wait(6000);
-  check("a narrow screen still has the menu", await narrow.p.getByRole("button", { name: "Menu", exact: true }).locator("visible=true").count() === 1 &&
-    await narrow.p.getByRole("button", { name: "Delete", exact: true }).locator("visible=true").count() === 0);
+  check("a narrow screen has the buttons in the bar too, without a menu", await narrow.p.getByRole("button", { name: "Menu", exact: true }).locator("visible=true").count() === 0 &&
+    await narrow.p.getByRole("button", { name: "Delete", exact: true }).locator("visible=true").count() === 1);
   await b.close();
 });
 

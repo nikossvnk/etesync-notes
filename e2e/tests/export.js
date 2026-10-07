@@ -37,8 +37,7 @@ run(async () => {
   // A note deleted in the app isn't exported
   await A.home(); await A.openNotebook(second);
   await A.open("Gone " + n);
-  await A.btn(/^menu$/i).click(); await A.wait(800);
-  await A.vis('text="Delete"').click({ force: true }); await A.wait(800);
+  await A.btn(/^delete$/i).click(); await A.wait(800);
   await A.p.getByRole("button", { name: /^ok$/i }).locator("visible=true").last().click(); await A.wait(5000);
   check("the note was deleted on the server", (await api.noteNames()).includes("DELETED:Gone " + n));
 

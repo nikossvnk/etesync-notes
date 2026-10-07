@@ -3,7 +3,8 @@ import { I18nManager, StyleSheet, TextInput } from "react-native";
 import { Appbar } from "react-native-paper";
 import { fonts, useTheme } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MenuButton from "./MenuButton";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { goUp } from "../navigation";
 import { headerStyle } from "./Appbar";
 
 type PropsType = {
@@ -17,10 +18,19 @@ export default function SearchToolbar(props: PropsType) {
   const textColor = theme.colors.text;
   const inputRef = React.useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+
+  // Typing goes into the search right away (focusing it once the screen has come in, as it can't
+  // take the focus before)
+  React.useEffect(() => {
+    const timeout = setTimeout(() => inputRef.current?.focus(), 500);
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <Appbar.Header statusBarHeight={insets.top} style={headerStyle(theme)}>
-      <MenuButton />
+      <Appbar.BackAction containerColor="transparent" color={theme.colors.text} accessibilityLabel="Back" onPress={() => goUp(navigation, route)} />
       <Appbar.Action
         containerColor="transparent"
         disabled

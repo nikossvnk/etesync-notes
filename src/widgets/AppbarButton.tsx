@@ -3,13 +3,7 @@
 
 import { Tooltip } from "react-native-paper";
 
-import { useDeviceBreakpoint } from "../helpers";
 import AppbarAction from "./AppbarAction";
-
-// Wide screens have room for all of the actions of a screen in its bar, instead of a menu
-export function useWideAppbar() {
-  return useDeviceBreakpoint("tabletLandscape");
-}
 
 interface PropsType {
   icon: string;

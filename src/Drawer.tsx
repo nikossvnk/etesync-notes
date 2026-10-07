@@ -151,6 +151,15 @@ export default function Drawer(props: PropsType) {
               }}
               icon="note-multiple"
             />
+            <DrawerItem
+              label="Notebooks"
+              to="/notebooks"
+              onPress={() => {
+                navigation.closeDrawer();
+                (navigation as any).navigate("Root", { screen: "Notebooks" });
+              }}
+              icon="notebook-multiple"
+            />
             <Divider />
           </>
         )}

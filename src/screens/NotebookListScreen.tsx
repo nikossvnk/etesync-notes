@@ -15,9 +15,7 @@ import { useCredentials } from "../credentials";
 import NoteList from "../components/NoteList";
 import Appbar from "../widgets/Appbar";
 import AppbarAction from "../widgets/AppbarAction";
-import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
-import Menu from "../widgets/Menu";
-import MenuItem from "../widgets/MenuItem";
+import AppbarButton from "../widgets/AppbarButton";
 import NotFound from "../widgets/NotFound";
 import GroupedRow from "../widgets/GroupedRow";
 import { defaultColor } from "../helpers";
@@ -212,12 +210,10 @@ interface RightActionPropsType {
 
 function RightAction(props: RightActionPropsType) {
   const etebase = useCredentials()!;
-  const [showMenu, setShowMenu] = React.useState(false);
   const syncDispatch = useDispatch();
   const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
   const pendingCount = usePendingCount();
   const navigation = useNavigation<DefaultNavigationProp>();
-  const wide = useWideAppbar();
   const { colUid } = props;
 
   async function refresh() {
@@ -253,35 +249,15 @@ function RightAction(props: RightActionPropsType) {
         icon={(pendingCount > 0) ? "cloud-upload-outline" : "sync"}
         accessibilityLabel={(pendingCount > 0) ? `Sync (${pendingCount} not uploaded yet)` : "Sync"}
         disabled={isSyncing}
-        onPress={() => {
-          setShowMenu(false);
-          refresh();
-        }}
+        onPress={refresh}
       />
-      {colUid && wide && (
+      {colUid && (
         <AppbarButton
           icon="notebook"
           title="Manage Notebook"
           disabled={isSyncing}
           onPress={() => navigation.navigate("CollectionChangelog", { colUid })}
         />
-      )}
-      {colUid && !wide && (
-        <Menu
-          visible={showMenu}
-          onDismiss={() => setShowMenu(false)}
-          anchor={(
-            <AppbarAction icon="dots-vertical" accessibilityLabel="Menu" onPress={() => setShowMenu(true)} />
-          )}
-        >
-          <MenuItem icon="notebook" title="Manage Notebook"
-            disabled={isSyncing}
-            onPress={() => {
-              setShowMenu(false);
-              navigation.navigate("CollectionChangelog", { colUid });
-            }}
-          />
-        </Menu>
       )}
     </View>
   );

@@ -185,7 +185,14 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
   };
   s.tab = async (name) => {
     await s.dismiss();
-    await p.getByRole("tab", { name: new RegExp(name) }).locator("visible=true").first().click(); await wait(1500);
+    // The notes and the notebooks are in the menu (the drawer), the search is opened from the notes
+    if (name === "Search") {
+      await p.getByRole("search", { name: "Search notes" }).locator("visible=true").first().click(); await wait(1500);
+      return;
+    }
+    await btn(/^main menu$/i).click(); await wait(800);
+    // (the name of a menu item starts with its icon's character)
+    await p.getByRole("button", { name: new RegExp(`(^|\\s)${name}$`) }).locator("visible=true").last().click(); await wait(1500);
   };
   s.sync = async () => { await btn(/^sync/i).click(); await wait(5000); };
   s.has = async (str) => (await text()).includes(str);
@@ -262,28 +269,24 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
     return vis("textarea");
   };
 
-  // Notebooks: going back to the list of notebooks, and editing one
+  // Notebooks: going back to the list of notebooks (from the screens above it, or the notes), and editing one
   s.home = async () => {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       await s.dismiss();
       const back = p.getByRole("button", { name: /^back$/i }).locator("visible=true");
-      if ((await back.count() === 0) || (new URL(p.url()).pathname === "/")) {
+      if (await back.count() === 0) {
         break;
       }
       await back.first().click(); await wait(1200);
     }
     await s.tab("Notebooks");
-    if (s.inNotebook) {
-      await btn(/^back$/i).click(); await wait(1200); s.inNotebook = false;
-    }
+    s.inNotebook = false;
   };
   s.openNotebook = async (name) => { await s.open(name); s.inNotebook = true; };
   s.editNotebook = async (name) => {
     await s.home(); await s.openNotebook(name);
-    await btn(/^menu$/i).click(); await wait(800);
-    await vis('text="Manage Notebook"').click({ force: true }); await wait(1500);
-    await btn(/^menu$/i).click(); await wait(800);
-    await vis('text="Edit"').click({ force: true }); await wait(1500);
+    await btn(/^manage notebook$/i).click(); await wait(1500);
+    await btn(/^edit$/i).click(); await wait(1500);
   };
   s.createNotebook = async (name) => {
     await s.tab("Notebooks");

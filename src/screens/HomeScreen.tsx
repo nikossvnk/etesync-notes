@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
-import { BottomNavigation, Text, TouchableRipple } from "react-native-paper";
+import { Text, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp, useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
@@ -21,11 +21,6 @@ interface PropsType {
   route: RouteProp<RootStackParamList, "Home"> | RouteProp<RootStackParamList, "Collection">;
 }
 
-const routes = [
-  { key: "notes", title: "Notes", focusedIcon: "note-multiple" },
-  { key: "search", title: "Search", focusedIcon: "magnify" },
-  { key: "notebooks", title: "Notebooks", focusedIcon: "notebook-multiple" },
-];
 
 // Wide screens list the notes in a column of their own, next to the screen, which shows the open note.
 // Without one it says where they are.
@@ -69,56 +64,29 @@ function NoNoteOpen() {
   );
 }
 
-export default function HomeScreen(props: PropsType) {
+export default function HomeScreen(_props: PropsType) {
   if (useWideLayout()) {
     return <NoNoteOpen />;
   }
-  return <TabsScreen {...props} />;
+  return <NotesScreen />;
 }
 
-function TabsScreen(props: PropsType) {
-  const [index, setIndex] = React.useState(0);
-  const theme = useTheme();
-  const activeRoute = routes[index];
-  const renderScene = ({ route }: { route: { key: string } }) => {
-    switch (route.key) {
-      case "notes":
-        return <NoteListScreen active={activeRoute?.key === "notes"} onSearch={() => setIndex(1)} />;
-      case "search":
-        return <SearchScreen active={activeRoute?.key === "search"} />;
-      case "notebooks":
-        return <NotebookListScreen colUid={colUid} active={activeRoute?.key === "notebooks"} />;
-      default:
-        return null;
-    }
-  };
-
-  const colUid = props.route.params?.colUid || undefined;
-
-  React.useEffect(() => {
-    if (colUid) {
-      setIndex(2);
-    }
-  }, []);
-
-  return (
-    <BottomNavigation
-      navigationState={{ index, routes }}
-      onIndexChange={setIndex}
-      renderScene={renderScene}
-      shifting={false}
-      activeColor={theme.colors.accent}
-      inactiveColor={theme.colors.textMuted}
-      barStyle={{
-        backgroundColor: theme.colors.surface,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: theme.colors.border,
-        elevation: 0,
-      }}
-    />
-  );
+// The notes, which have a search field that opens the search, and the notebooks in the menu
+function NotesScreen() {
+  const navigation = useNavigation<any>();
+  return <NoteListScreen active onSearch={() => navigation.navigate("Search")} />;
 }
 
+// The search, as a screen of its own
+export function SearchRoute() {
+  return <SearchScreen active />;
+}
+
+// The notebooks (and the notes of one of them), as a screen of its own
+export function NotebooksRoute(props: { route: RouteProp<RootStackParamList, "Notebooks"> | RouteProp<RootStackParamList, "Collection"> }) {
+  const colUid = (props.route.params as any)?.colUid || undefined;
+  return <NotebookListScreen colUid={colUid} active />;
+}
 const styles = StyleSheet.create({
   placeholder: {
     flex: 1,

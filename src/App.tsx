@@ -33,6 +33,8 @@ type RootStackScreens = {
 
 const rootStackScreens: RootStackScreens = {
   Home: "",
+  Search: "search",
+  Notebooks: "notebooks",
   Login: "login",
   Signup: "signup",
   CollectionCreate: "new-notebook",
