@@ -67,3 +67,39 @@ export async function moveNote(etebase: Etebase.Account, from: CachedCollection,
   }
   return newItem.uid;
 }
+
+// Deletes notes, given as "colUid/itemUid", the way deleting one in its screen does: they're marked
+// as deleted on the device, and the deletion is uploaded
+export async function deleteNotes(etebase: Etebase.Account, notes: Iterable<string>) {
+  const state = store.getState() as any;
+  const colMgr = etebase.getCollectionManager();
+  const byNotebook = new Map<string, string[]>();
+  for (const note of notes) {
+    const [colUid, itemUid] = note.split("/");
+    byNotebook.set(colUid, [...(byNotebook.get(colUid) ?? []), itemUid]);
+  }
+  for (const [colUid, itemUids] of byNotebook) {
+    const cachedCol: CachedCollection | undefined = state.cache.collections.get(colUid);
+    if (!cachedCol) {
+      continue;
+    }
+    const col = colMgr.cacheLoad(cachedCol.cache);
+    const itemMgr = colMgr.getItemManager(col);
+    const items: Etebase.Item[] = [];
+    for (const itemUid of itemUids) {
+      const cachedItem: CachedItem | undefined = state.cache.items.get(colUid)?.get(itemUid);
+      if (!cachedItem || cachedItem.isDeleted) {
+        continue;
+      }
+      const item = itemMgr.cacheLoad(cachedItem.cache);
+      const meta = item.getMeta();
+      meta.mtime = (new Date()).getTime();
+      item.setMeta(meta);
+      item.delete(true);
+      items.push(item);
+    }
+    if (items.length > 0) {
+      await saveItemsLocally(etebase, col, itemMgr, items);
+    }
+  }
+}

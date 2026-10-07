@@ -11,7 +11,8 @@ type PropsType = {
   to?: string;
   action?: NavigationAction;
   external?: boolean;
-  onPress?: () => void;
+  // Called with the press first: returning true means it was handled there, and the link isn't followed
+  onPress?: (e?: any) => boolean | void;
   renderChild: (props: ChildProps) => React.ReactElement;
 };
 
@@ -27,7 +28,10 @@ export default function Link(props: PropsType) {
   const onPress = (
     e?: React.MouseEvent<HTMLAnchorElement, MouseEvent> | GestureResponderEvent
   ) => {
-    onPressProp?.();
+    if (onPressProp?.(e)) {
+      e?.preventDefault();
+      return;
+    }
 
     if (!external) {
       linkProps.onPress(e);
@@ -40,7 +44,8 @@ export default function Link(props: PropsType) {
       renderChild={(props) => (
         <a
           {...props}
-          onClick={onPress}
+          // Before what's in it (e.g. something that can be long pressed, which keeps clicks to itself)
+          onClickCapture={onPress}
           href={(external) ? to : linkProps.href}
           target={(external) ? "_blank" : undefined}
           // The page that is opened gets neither the app's address nor a way back to it

@@ -2,6 +2,7 @@ import * as React from "react";
 import { differenceInCalendarDays, format, isThisYear, isToday, isYesterday } from "date-fns";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import * as Etebase from "etebase";
 
@@ -124,10 +125,16 @@ interface NoteRowPropsType {
   notebookName?: string;
   first: boolean;
   last: boolean;
+  // Selecting: whether it's selected, selecting it (a long press), and a press, which selects it
+  // when notes are being selected (then it returns true)
+  selected?: boolean;
+  onSelect?: (note: string) => void;
+  onPressNote?: (note: string) => boolean;
 }
 
 const NoteRow = React.memo(function NoteRow(props: NoteRowPropsType) {
-  const { item, itemMgr, color, notebookName, first, last } = props;
+  const { item, itemMgr, color, notebookName, first, last, selected, onSelect, onPressNote } = props;
+  const key = `${item.colUid}/${item.uid}`;
   const theme = useTheme();
   const preview = useNotePreview(itemMgr, item.cache);
   const mtime = item.meta.mtime;
@@ -135,13 +142,19 @@ const NoteRow = React.memo(function NoteRow(props: NoteRowPropsType) {
   return (
     <Link
       to={`/notebook/${item.colUid}/note/${item.uid}`}
+      onPress={() => onPressNote?.(key) ?? false}
       renderChild={(props) => (
         <GroupedRow
           {...props}
           first={first}
           last={last}
+          // A long press starts selecting notes
+          onLongPress={(onSelect) ? () => onSelect(key) : undefined}
+          delayLongPress={400}
           accessibilityLabel={item.meta.name || untitled}
-          style={styles.row}
+          accessibilityState={{ selected: !!selected }}
+          aria-selected={!!selected}
+          style={[styles.row, (selected) ? { backgroundColor: theme.colors.accentTint } : {}]}
         >
           <View>
             <View style={styles.rowTop}>
@@ -150,6 +163,9 @@ const NoteRow = React.memo(function NoteRow(props: NoteRowPropsType) {
             </View>
             {!!preview && (
               <Text style={[styles.rowPreview, { color: theme.colors.textSecondary }]} numberOfLines={2}>{preview}</Text>
+            )}
+            {selected && (
+              <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.accent} style={styles.check} />
             )}
             {notebookName && (
               <View style={styles.rowNotebook}>
@@ -171,6 +187,10 @@ interface PropsType {
   header?: React.ReactElement;
   // Shown when there are no notes at all
   empty?: React.ReactElement;
+  // The notes that are selected ("colUid/itemUid"), when notes can be selected, and selecting one
+  selection?: Set<string>;
+  onSelect?: (note: string) => void;
+  onPressNote?: (note: string) => boolean;
 }
 
 export default function NoteList(props: PropsType) {
@@ -235,6 +255,9 @@ export default function NoteList(props: PropsType) {
         notebookName={(colUid) ? undefined : collection?.meta.name}
         first={index === 0}
         last={index === entriesList.length - 1}
+        selected={props.selection?.has(`${item.colUid}/${item.uid}`)}
+        onSelect={props.onSelect}
+        onPressNote={props.onPressNote}
       />
     );
   }
@@ -244,6 +267,8 @@ export default function NoteList(props: PropsType) {
       style={[{ backgroundColor: theme.colors.background }, { flex: 1 }]}
       contentContainerStyle={styles.list}
       data={entriesList}
+      // (the rows show whether they're selected)
+      extraData={props.selection}
       keyExtractor={(item) => item.uid}
       renderItem={renderEntry}
       maxToRenderPerBatch={10}
@@ -298,6 +323,11 @@ const styles = StyleSheet.create({
   },
   rowSmall: {
     fontSize: 12,
+  },
+  check: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
   },
   empty: {
     padding: 16,

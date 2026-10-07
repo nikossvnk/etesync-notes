@@ -12,7 +12,8 @@ type PropsType = {
   to: string;
   action?: NavigationAction;
   external?: boolean;
-  onPress?: () => void;
+  // Called with the press first: returning true means it was handled there, and the link isn't followed
+  onPress?: (e?: any) => boolean | void;
   renderChild: (props: ChildProps) => React.ReactElement;
 };
 
@@ -28,7 +29,9 @@ export default function Link(props: PropsType) {
   const onPress = (
     e?: React.MouseEvent<HTMLAnchorElement, MouseEvent> | GestureResponderEvent
   ) => {
-    onPressProp?.();
+    if (onPressProp?.(e)) {
+      return;
+    }
 
     if (external) {
       Linking.openURL(to);

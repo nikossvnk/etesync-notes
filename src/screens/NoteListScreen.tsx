@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { StyleSheet, View, Platform } from "react-native";
-import { FAB, Text, TouchableRipple } from "react-native-paper";
+import { BackHandler, StyleSheet, View, Platform } from "react-native";
+import { FAB, Paragraph, Text, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
@@ -21,6 +21,8 @@ import Appbar from "../widgets/Appbar";
 import AppbarButton from "../widgets/AppbarButton";
 import { DefaultNavigationProp } from "../RootStackParamList";
 import { fonts, useTheme } from "../theme";
+import ConfirmationDialog from "../widgets/ConfirmationDialog";
+import { deleteNotes } from "../notes";
 
 interface PropsType {
   active: boolean;
@@ -53,13 +55,81 @@ export default function NoteListScreen(props: PropsType) {
   });
 
   const { active, onSearch } = props;
+  const etebase = useCredentials();
+  // The notes that are selected (by a long press), to delete them
+  const [selection, setSelection] = React.useState<Set<string>>(() => new Set());
+  const [deleteShown, setDeleteShown] = React.useState(false);
+  const selecting = selection.size > 0;
+
+  const select = React.useCallback((note: string) => {
+    setSelection((current) => {
+      const ret = new Set(current);
+      if (!ret.delete(note)) {
+        ret.add(note);
+      }
+      return ret;
+    });
+  }, []);
+
+  // While notes are selected, a press selects (or deselects) a note instead of opening it. It's
+  // decided when it's pressed, with the selection as it is then.
+  const selectionRef = React.useRef(selection);
+  selectionRef.current = selection;
+  // (the release of a long press is a press too, on the web, which isn't one more selection)
+  const longPressRef = React.useRef({ note: "", time: 0 });
+  const longPress = React.useCallback((note: string) => {
+    longPressRef.current = { note, time: Date.now() };
+    select(note);
+  }, [select]);
+  const pressNote = React.useCallback((note: string) => {
+    if ((longPressRef.current.note === note) && (Date.now() - longPressRef.current.time < 1500)) {
+      longPressRef.current = { note: "", time: 0 };
+      return true;
+    }
+    if (selectionRef.current.size === 0) {
+      return false;
+    }
+    select(note);
+    return true;
+  }, [select]);
+
+  // The back button deselects them
+  React.useEffect(() => {
+    if (!selecting) {
+      return undefined;
+    }
+    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
+      setSelection(new Set());
+      return true;
+    });
+    return () => handler.remove();
+  }, [selecting]);
 
   React.useEffect(() => {
     if (!active) {
       return;
     }
 
+    if (selecting) {
+      navigation.setOptions({
+        header: (props) => <Appbar {...props} menuFallback />,
+        title: "Notes",
+        headerTitle: () => (
+          <Text style={[styles.selectedTitle, { color: theme.colors.text }]}>{selection.size} selected</Text>
+        ),
+        headerShadowVisible: true,
+        headerLeft: () => (
+          <AppbarButton icon="close" title="Clear selection" onPress={() => setSelection(new Set())} />
+        ),
+        headerRight: () => (
+          <AppbarButton icon="delete" title="Delete selected" onPress={() => setDeleteShown(true)} />
+        ),
+      });
+      return;
+    }
+
     navigation.setOptions({
+      headerLeft: undefined,
       header: (props) => <Appbar {...props} menuFallback />,
       title: "Notes",
       // The title is shown in big under the bar, or above the list next to the sidebar
@@ -70,7 +140,7 @@ export default function NoteListScreen(props: PropsType) {
         <RightAction />
       ),
     });
-  }, [active, navigation, sidebarShown]);
+  }, [active, navigation, sidebarShown, selecting, selection.size, theme]);
 
   if (syncGate) {
     return syncGate;
@@ -121,15 +191,31 @@ export default function NoteListScreen(props: PropsType) {
           <View style={styles.listGap} />
         )}
         empty={<EmptyNotes onCreate={() => navigation.navigate("NoteCreate")} />}
+        selection={selection}
+        onSelect={longPress}
+        onPressNote={pressNote}
       />
 
-      <FAB
+      <ConfirmationDialog
+        title="Delete Notes"
+        visible={deleteShown}
+        onOk={async () => {
+          await deleteNotes(etebase!, selection);
+          setDeleteShown(false);
+          setSelection(new Set());
+        }}
+        onCancel={() => setDeleteShown(false)}
+      >
+        <Paragraph>{`Are you sure you would like to delete ${(selection.size === 1) ? "this note" : `these ${selection.size} notes`}?`}</Paragraph>
+      </ConfirmationDialog>
+
+      {!selecting && <FAB
         icon="plus"
         accessibilityLabel="New"
         color={theme.colors.onAccent}
         style={[styles.fab, { backgroundColor: theme.colors.accent }]}
         onPress={() => navigation.navigate("NoteCreate", (filterBy) ? { colUid: filterBy } : undefined)}
-      />
+      />}
     </>
   );
 }
@@ -181,6 +267,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 18,
+  },
+  selectedTitle: {
+    flex: 1,
+    fontFamily: fonts.semibold,
+    fontSize: 18,
+    marginLeft: 8,
   },
   header: {
     paddingHorizontal: 20,
