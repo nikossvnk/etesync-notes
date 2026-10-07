@@ -29,13 +29,26 @@ run(async () => {
   const notes = () => column.locator("a[href*='/note/'] [aria-label]").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
   const note = (name) => column.locator(`a[href*='/note/'] [aria-label="${name}"]`).first();
   const noteSelected = async (name) => (await note(name).getAttribute("aria-selected")) === "true";
+  // Whether the column lists the note, scrolling it (it only has the rows it scrolled to), and back to its top
+  const listed = async (name) => {
+    const box = await column.boundingBox();
+    await A.p.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    let found = false;
+    for (let i = 0; (i < 40) && !found; i++) {
+      found = (await notes()).includes(name);
+      if (!found) {
+        await A.p.mouse.wheel(0, 600); await A.wait(250);
+      }
+    }
+    await A.p.mouse.wheel(0, -100000); await A.wait(300);
+    return found;
+  };
 
   check("the sidebar and the notes are shown on a wide screen", await sidebar.count() === 1 && await column.count() === 1);
   check("there's no drawer menu button", await A.btn(/^main menu$/i).count() === 0);
   check("the sidebar shows the account", (await sidebar.innerText()).includes("e2e-tester"));
   check("and the notebooks", await shown("Notebook My Notes") && await shown("Notebook " + other));
-  const allNotes = await notes();
-  check("the notes column lists the notes of all notebooks", allNotes.includes("First " + n) && allNotes.includes("Third " + n), allNotes);
+  check("the notes column lists the notes of all notebooks", await listed("First " + n) && await listed("Third " + n));
   check("next to it nothing is open yet", (await A.p.getByText("No note open").locator("visible=true").count()) === 1);
 
   // What the drawer has is in the account's menu, and the settings at the bottom
@@ -81,7 +94,7 @@ run(async () => {
   check("left empty for another note: thrown away", !(await notes()).includes("Untitled") && (await A.viewerText()).includes("the third note"));
   check("and not on the server", (await api.noteNames()).length === notesBefore);
   await row("All notes").click(); await A.wait(1500);
-  check("all notes lists all of them again", (await notes()).includes("First " + n) && await selected("All notes"));
+  check("all notes lists all of them again", await listed("First " + n) && await selected("All notes"));
 
   // Searching the titles and contents
   const search = A.p.locator('input[aria-label="Search notes"] >> visible=true');
@@ -92,7 +105,7 @@ run(async () => {
   await search.fill("nothinglikethis" + n); await A.wait(1500);
   check("and says so when nothing matches", (await column.innerText()).includes("No notes match"));
   await sidebar.getByRole("button", { name: "Clear" }).click(); await A.wait(800);
-  check("clearing it lists the notes again", (await notes()).includes("First " + n) && (await notes()).includes("Third " + n));
+  check("clearing it lists the notes again", await listed("First " + n) && await listed("Third " + n));
 
   // Hiding it, which is remembered, the notes stay
   await row("Hide the sidebar").click(); await A.wait(800);
