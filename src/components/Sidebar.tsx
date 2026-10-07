@@ -102,7 +102,7 @@ function Row(props: RowPropsType) {
 }
 
 // The account the app is logged in to, with a menu of what the drawer has on phones
-function Account(props: { onHide: () => void }) {
+function Account() {
   const theme = useTheme();
   const etebase = useCredentials()!;
   const { navigate } = useWideNavigation();
@@ -158,15 +158,6 @@ function Account(props: { onHide: () => void }) {
           }} />
         ))}
       </Menu>
-      <IconButton
-        containerColor="transparent"
-        iconColor={theme.colors.textMuted}
-        icon="chevron-double-left"
-        size={20}
-        style={styles.smallButton}
-        accessibilityLabel="Hide the sidebar"
-        onPress={props.onHide}
-      />
       <FingerprintDialog visible={showFingerprint} onDismiss={() => setShowFingerprint(false)} />
       <LogoutDialog visible={showLogout} onDismiss={() => setShowLogout(false)} />
     </View>
@@ -213,7 +204,7 @@ export default function Sidebar() {
         // No text gets selected while dragging the edge
         (resize.dragging && (Platform.OS === "web")) ? ({ userSelect: "none" } as any) : undefined]}
     >
-      <Account onHide={() => dispatch(setSettings({ sidebarVisible: false }) as any)} />
+      <Account />
       <View style={[styles.search, { borderColor, backgroundColor: theme.colors.surface }]}>
         <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textMuted} />
         <TextInput
@@ -286,9 +277,18 @@ export default function Sidebar() {
         />
         <View style={styles.syncState}>
           <View style={[styles.syncDot, { backgroundColor: (pendingCount > 0) ? theme.colors.disabled : theme.colors.success }]} />
-          <Text style={[styles.count, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.count, styles.syncText, { color: theme.colors.textMuted }]}>
             {(isSyncing) ? "Syncing…" : (pendingCount > 0) ? `${pendingCount} to sync` : "Synced"}
           </Text>
+          <IconButton
+            containerColor="transparent"
+            iconColor={theme.colors.textMuted}
+            icon="chevron-double-left"
+            size={20}
+            style={styles.smallButton}
+            accessibilityLabel="Hide the sidebar"
+            onPress={() => dispatch(setSettings({ sidebarVisible: false }) as any)}
+          />
         </View>
       </View>
       <View
@@ -335,9 +335,11 @@ const styles = StyleSheet.create({
     width: 6,
     zIndex: 1,
   },
+  // (its button is at the bottom, where the one that hides it is)
   hidden: {
     borderRightWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
+    justifyContent: "flex-end",
+    paddingBottom: 8,
   },
   account: {
     flexDirection: "row",
@@ -433,7 +435,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 12,
-    paddingTop: 4,
+  },
+  syncText: {
+    flex: 1,
   },
   syncDot: {
     width: 7,
