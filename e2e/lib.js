@@ -175,7 +175,15 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
     await btn(/^log in$/i).click(); await wait(8000);
   };
   // Opens a note or a notebook by its name
-  s.open = async (name) => { await p.getByText(name, { exact: true }).locator("visible=true").first().click(); await wait(2500); };
+  // (scrolling the list to it, which only has the rows it scrolled to)
+  s.open = async (name) => {
+    const target = p.getByText(name, { exact: true }).locator("visible=true");
+    for (let i = 0; (i < 40) && (await target.count() === 0); i++) {
+      await p.mouse.move(p.viewportSize().width * 0.6, p.viewportSize().height / 2);
+      await p.mouse.wheel(0, 600); await wait(250);
+    }
+    await target.first().click(); await wait(2500);
+  };
   s.back = async () => { await btn(/^back$/i).click(); await wait(2000); };
   s.dismiss = async () => {
     const d = p.getByRole("button", { name: /^dismiss$/i }).locator("visible=true");

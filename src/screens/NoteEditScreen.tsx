@@ -65,6 +65,7 @@ export default function NoteEditScreen(props: PropsType) {
   const [forcedSelection, setForcedSelection] = React.useState<{ start: number, end: number }>();
   // Whether the editor takes the focus when it opens, as when the note was clicked to edit it
   const [focusEditor, setFocusEditor] = React.useState(false);
+  const deskRef = React.useRef<View>(null);
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const { defaultViewMode, lastViewMode } = viewSettings;
   const { colUid, itemUid } = props.route.params;
@@ -96,6 +97,21 @@ export default function NoteEditScreen(props: PropsType) {
       onLeaveRef.current?.();
     };
   }, []);
+
+  // Escape ends editing, on the web (unless it closes a menu or a dialog)
+  React.useEffect(() => {
+    if (viewMode || (Platform.OS !== "web")) {
+      return undefined;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === "Escape") && !document.querySelector('[role="menu"], [aria-modal="true"]')) {
+        setLastViewMode(true);
+      }
+    };
+    // (before the text fields, which keep escape to themselves)
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [viewMode, viewSettings]);
 
   // A new note starts with typing its title. It's focused once the screen has opened, as it can't
   // take the focus while the screen is still coming in.
@@ -415,7 +431,18 @@ export default function NoteEditScreen(props: PropsType) {
       ) : (
         <>
           <FormatBar onFormat={applyFormat} onDone={(wideLayout) ? undefined : () => setLastViewMode(true)} />
-          <View style={[styles.desk, (wideLayout) && styles.deskWide, styles.editorDesk, { backgroundColor: theme.colors.sidebar }]}>
+          <Pressable
+            ref={deskRef}
+            // A click around the note (not in it) ends editing
+            onPress={(e) => {
+              if ((Platform.OS === "web") && ((e.nativeEvent as any).target === deskRef.current)) {
+                setLastViewMode(true);
+              }
+            }}
+            accessible={false}
+            {...{ tabIndex: -1 }}
+            style={[styles.desk, (wideLayout) && styles.deskWide, styles.editorDesk, { backgroundColor: theme.colors.sidebar }, styles.deskCursor]}
+          >
             <View style={[styles.sheet, styles.editorSheet, sheetColors]}>
               {head}
               <TextEditor
@@ -435,7 +462,7 @@ export default function NoteEditScreen(props: PropsType) {
                 }}
               />
             </View>
-          </View>
+          </Pressable>
         </>
       )}
       <ConfirmationDialog
@@ -674,6 +701,9 @@ const styles = StyleSheet.create({
   editorDesk: {
     flex: 1,
   },
+  deskCursor: {
+    cursor: "default",
+  } as any,
   editorSheet: {
     flex: 1,
     paddingBottom: 0,
