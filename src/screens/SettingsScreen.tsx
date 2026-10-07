@@ -6,6 +6,7 @@ import { Linking } from "react-native";
 import { List, Switch } from "react-native-paper";
 import { useDispatch, useSelector } from "react-redux";
 import * as Updates from "expo-updates";
+import { format } from "date-fns";
 
 import { LogLevel } from "../logging";
 
@@ -13,7 +14,7 @@ import { useCredentials } from "../credentials";
 
 import ScrollView from "../widgets/ScrollView";
 
-import { StoreState } from "../store";
+import { StoreState, store } from "../store";
 import { setSettings, pushMessage } from "../store/actions";
 import { ViewModeKey } from "../store/reducers";
 
@@ -25,6 +26,7 @@ import FontSelector from "../widgets/FontSelector";
 import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
 import { useTheme } from "../theme";
+import { exportNotes, saveFile } from "../import-export";
 
 function DarkModePreferenceSelector() {
   const dispatch = useDispatch();
@@ -251,7 +253,24 @@ const SettingsScreen = function _SettingsScreen() {
   const theme = useTheme();
   const settings = useSelector((state: StoreState) => state.settings);
 
+  const [exporting, setExporting] = React.useState(false);
+
   const loggedIn = !!etebase;
+
+  async function onExport() {
+    setExporting(true);
+    try {
+      const { data, count } = await exportNotes(etebase!, store.getState() as unknown as StoreState);
+      const name = `etesync-notes-${format(new Date(), "yyyy-MM-dd")}.zip`;
+      if (await saveFile(name, data, "application/zip")) {
+        dispatch(pushMessage({ message: `Exported ${count} ${(count === 1) ? "note" : "notes"} to ${name}`, severity: "success" }) as any);
+      }
+    } catch (e) {
+      dispatch(pushMessage({ message: `Export failed: ${e.message}`, severity: "error" }) as any);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <>
@@ -277,6 +296,12 @@ const SettingsScreen = function _SettingsScreen() {
               title="Change Password"
               description="Change your account's password"
               onPress={() => { navigation.navigate("Password") }}
+            />
+            <List.Item
+              title="Export Notes"
+              description={(exporting) ? "Exporting…" : "Save all of your notes as Markdown files in a zip, a folder for every notebook"}
+              disabled={exporting}
+              onPress={onExport}
             />
           </List.Section>
         )}
