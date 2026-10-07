@@ -76,6 +76,7 @@ export default function NoteEditScreen(props: PropsType) {
   const etebase = useCredentials()!;
   const navigation = useNavigation<NavigationProp>();
   const syncGate = useSyncGate();
+  const theme = useTheme();
 
   const cacheCollection = (colUid) ? cacheItems.get(colUid) : undefined;
   const cacheItem = (cacheCollection && itemUid) ? cacheCollection.get(itemUid) : undefined;
@@ -336,7 +337,7 @@ export default function NoteEditScreen(props: PropsType) {
   return (
     <>
       {!wide && (
-        <View style={styles.notebookLine}>
+        <View style={[styles.notebookLine, { backgroundColor: theme.colors.background }]}>
           <NotebookPicker colUid={colUid} editable={!viewMode} onChange={changeNotebook} />
         </View>
       )}
