@@ -7,6 +7,7 @@ import * as Etebase from "etebase";
 
 import { logger } from "./logging";
 import * as C from "./constants";
+import { fonts } from "./theme";
 
 export const defaultColor = "#8BC34A";
 
@@ -178,17 +179,17 @@ export declare type FontFamilyKey = "regular" | "monospace" | "serif";
  
 export const fontFamilies = Platform.select({
   web: {
-    regular: 'Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif',
+    regular: fonts.regular,
     monospace: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
     serif: '"Times New Roman", Georgia, serif',
   },
   ios: {
-    regular: "System",
+    regular: fonts.regular,
     monospace: "Courier",
     serif: "Times New Roman",
   },
   default: {
-    regular: "sans-serif",
+    regular: fonts.regular,
     monospace: "monospace",
     serif: "serif",
   },

@@ -4,10 +4,11 @@
 import * as React from "react";
 import * as Etebase from "etebase";
 import { View, ViewProps, KeyboardAvoidingView, Platform, StyleSheet, TextInput } from "react-native";
-import { Appbar as PaperAppbar, Paragraph, Text, TouchableRipple } from "react-native-paper";
+import { Paragraph, Text, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useTheme } from "../theme";
+import { fonts, useTheme } from "../theme";
 import { useNavigation, RouteProp } from "@react-navigation/native";
+import { format } from "date-fns";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -30,7 +31,6 @@ import ConfirmationDialog from "../widgets/ConfirmationDialog";
 import NotFound from "../widgets/NotFound";
 import AppbarAction from "../widgets/AppbarAction";
 import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
-import { Theme } from "../theme";
 import { defaultColor, fontFamilies } from "../helpers";
 import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
@@ -57,6 +57,7 @@ export default function NoteEditScreen(props: PropsType) {
   // Set when the note was moved to another notebook, as it isn't this one anymore then
   const movedRef = React.useRef(false);
   const textInputRef = React.useRef<TextInput>(null);
+  const titleInputRef = React.useRef<TextInput>(null);
   const viewSettings = useSelector((state: StoreState) => state.settings.viewSettings);
   const { defaultViewMode, lastViewMode } = viewSettings;
   const { colUid, itemUid } = props.route.params;
@@ -64,7 +65,6 @@ export default function NoteEditScreen(props: PropsType) {
     // New notes, and notes that were moved while they were being edited, open in the editor
     (openInEditor.delete(itemUid)) ? false : ((defaultViewMode === "last") ? lastViewMode : (defaultViewMode === "viewer"))
   ));
-  const wide = useWideAppbar();
   // A new note starts with writing its title
   const [isNew] = React.useState(() => newNotes.has(itemUid));
   const [noteDeleteDialogShow, setNoteDeleteDialogShow] = React.useState(false);
@@ -89,26 +89,27 @@ export default function NoteEditScreen(props: PropsType) {
     };
   }, []);
 
+  // A new note starts with typing its title. It's focused once the screen has opened, as it can't
+  // take the focus while the screen is still coming in.
+  React.useEffect(() => {
+    if (!isNew || loading) {
+      return undefined;
+    }
+    const focus = () => titleInputRef.current?.focus();
+    const timeout = setTimeout(focus, 500);
+    const unsubscribe = navigation.addListener("transitionEnd", focus);
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
+  }, [isNew, loading]);
+
   React.useEffect(() => {
     const name = (cacheItem) ? (cacheItem.meta.name || untitled) : "Note Not Found";
     navigation.setOptions({
       title: name,
-      // The title can be changed in the editor, and on wide screens the notebook is next to it
-      headerTitle: (cacheItem && !loading) ? () => (
-        <View style={styles.headerTitle}>
-          <NoteTitle
-            editing={!viewMode}
-            value={(viewMode) ? name : title}
-            placeholder={nameFromContent(content) || "Title"}
-            onChange={setTitle}
-            onSubmit={() => textInputRef.current?.focus()}
-            autoFocus={isNew}
-          />
-          {wide && (
-            <NotebookPicker colUid={colUid} editable={!viewMode} onChange={changeNotebook} onAppbar />
-          )}
-        </View>
-      ) : undefined,
+      // The title and notebook are in the note itself
+      headerTitle: () => <View style={styles.headerTitle} />,
       headerRight: () => (
         <RightAction
           viewMode={viewMode}
@@ -120,7 +121,7 @@ export default function NoteEditScreen(props: PropsType) {
         />
       ),
     });
-  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, wide, loading]);
+  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, loading]);
 
   // Write the content to the local cache and queue the note to be pushed to the server
   async function saveLocally() {
@@ -334,28 +335,49 @@ export default function NoteEditScreen(props: PropsType) {
     return <LoadingIndicator />;
   }
 
+  const mtime = cacheItem.meta.mtime;
+  // The notebook and date, and the title, above the note
+  const head = (
+    <View style={styles.head}>
+      <View style={styles.metaLine}>
+        <NotebookPicker colUid={colUid} editable={!viewMode} onChange={changeNotebook} />
+        {!!mtime && <Text style={[styles.metaText, { color: theme.colors.textMuted }]}>{"·  " + format(mtime, "PP")}</Text>}
+      </View>
+      <NoteTitle
+        editing={!viewMode}
+        value={(viewMode) ? (cacheItem.meta.name || untitled) : title}
+        placeholder={nameFromContent(content) || "Title"}
+        onChange={setTitle}
+        onSubmit={() => textInputRef.current?.focus()}
+        inputRef={titleInputRef}
+        autoFocus={isNew}
+      />
+    </View>
+  );
+
   return (
     <>
-      {!wide && (
-        <View style={[styles.notebookLine, { backgroundColor: theme.colors.background }]}>
-          <NotebookPicker colUid={colUid} editable={!viewMode} onChange={changeNotebook} />
-        </View>
-      )}
       {viewMode ? (
-        <ScrollView keyboardAware contentContainerStyle={{ flexGrow: 1, padding: 10 }} testID="note-viewer">
-          <Markdown
+        <ScrollView keyboardAware contentContainerStyle={styles.page}>
+          {head}
+          <View testID="note-viewer" style={styles.viewer}>
+            <Markdown
+              setContent={setContent}
+              content={content}
+            />
+          </View>
+        </ScrollView>
+      ) : (
+        <View style={[styles.page, styles.editorPage, { backgroundColor: theme.colors.background }]}>
+          {head}
+          <TextEditor
+            inputRef={textInputRef}
+            style={{ flexGrow: 1 }}
+            contentStyle={styles.editorContent}
             setContent={setContent}
             content={content}
           />
-        </ScrollView>
-      ) : (
-        <TextEditor
-          inputRef={textInputRef}
-          style={{ flexGrow: 1 }}
-          contentStyle={{ padding: 10 }}
-          setContent={setContent}
-          content={content}
-        />
+        </View>
       )}
       <ConfirmationDialog
         title="Delete Note"
@@ -482,42 +504,37 @@ function TextEditor(props: TextEditorPropsType) {
   );
 }
 
-// The color of text on the bar at the top
-function appbarTextColor(theme: Theme) {
-  return (theme.dark) ? theme.colors.onSurface : "#000000";
-}
-
 interface NoteTitlePropsType {
   editing: boolean;
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  inputRef?: React.RefObject<TextInput | null>;
   autoFocus?: boolean;
 }
 
-// The title of the note in the bar at the top, which can be changed in the editor
+// The title of the note, above it, which can be changed in the editor
 function NoteTitle(props: NoteTitlePropsType) {
   const theme = useTheme();
-  const { editing, value, placeholder, onChange, onSubmit, autoFocus } = props;
+  const { editing, value, placeholder, onChange, onSubmit, inputRef, autoFocus } = props;
 
-  const color = appbarTextColor(theme);
   if (!editing) {
-    // (it doesn't get the bar's color, as it's not right in the bar)
-    return <PaperAppbar.Content title={value} color={color} style={styles.title} />;
+    return <Text style={[styles.title, { color: theme.colors.text }]} accessibilityRole="header">{value}</Text>;
   }
 
   return (
     <TextInput
+      ref={inputRef}
       value={value}
       onChangeText={onChange}
       placeholder={placeholder}
-      placeholderTextColor={color + "99"}
+      placeholderTextColor={theme.colors.disabled}
       accessibilityLabel="Title"
       autoFocus={autoFocus}
       returnKeyType="next"
       onSubmitEditing={onSubmit}
-      style={[styles.title, styles.titleInput, { color, borderBottomColor: color + "66" }]}
+      style={[styles.title, styles.titleInput, { color: theme.colors.text }]}
     />
   );
 }
@@ -527,24 +544,22 @@ interface NotebookPickerPropsType {
   // Whether it can be changed, which moves the note to another notebook
   editable: boolean;
   onChange: (colUid: string) => void;
-  // Shown in the bar at the top, rather than under it
-  onAppbar?: boolean;
 }
 
-// The notebook of the note: under the bar at the top on narrow screens, and in it on wide ones
+// The notebook of the note, above its title
 function NotebookPicker(props: NotebookPickerPropsType) {
   const theme = useTheme();
-  const { colUid, editable, onChange, onAppbar } = props;
+  const { colUid, editable, onChange } = props;
   const [open, setOpen] = React.useState(false);
   const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
   const notebooks = Array.from(cacheCollections.entries())
     .map(([uid, col]) => ({ uid, name: col.meta.name ?? "", color: col.meta.color || defaultColor }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const current = notebooks.find((x) => x.uid === colUid);
-  const color = (onAppbar) ? appbarTextColor(theme) : theme.colors.onSurface;
+  const color = theme.colors.textMuted;
 
   const content = (
-    <View style={[styles.notebook, (editable) ? { borderColor: color + "66" } : undefined, (editable) ? styles.notebookEditable : undefined]}>
+    <View style={[styles.notebook, (editable) ? { borderColor: theme.colors.border, backgroundColor: theme.colors.surface } : undefined, (editable) ? styles.notebookEditable : undefined]}>
       <View style={[styles.notebookColor, { backgroundColor: current?.color ?? defaultColor }]} />
       <Text style={[styles.notebookName, { color }]} numberOfLines={1}>{current?.name}</Text>
       {editable && <MaterialCommunityIcons name="menu-down" size={20} color={color} />}
@@ -591,25 +606,54 @@ function NotebookPicker(props: NotebookPickerPropsType) {
 const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
+  },
+  // The note, which isn't wider than is comfortable to read
+  page: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  viewer: {
+    flexGrow: 1,
+    minHeight: 40,
+  },
+  editorPage: {
+    flex: 1,
+    paddingBottom: 0,
+  },
+  editorContent: {
+    paddingHorizontal: 0,
+    paddingTop: 4,
+    paddingBottom: 32,
+  },
+  head: {
+    marginBottom: 14,
+  },
+  metaLine: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 8,
+  },
+  metaText: {
+    fontSize: 13,
+    marginLeft: 6,
   },
   title: {
-    flex: 1,
+    fontFamily: fonts.bold,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.5,
   },
   titleInput: {
-    fontSize: 20,
-    marginLeft: 12,
-    marginRight: 8,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
+    padding: 0,
     minWidth: 0,
-  },
-  notebookLine: {
-    flexDirection: "row",
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
+    borderWidth: 0,
+    outlineStyle: "none",
+  } as any,
   notebookWrap: {
     flexShrink: 1,
     maxWidth: 280,
@@ -618,23 +662,24 @@ const styles = StyleSheet.create({
   notebook: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "transparent",
   },
   notebookEditable: {
-    paddingRight: 2,
+    paddingLeft: 10,
+    paddingRight: 4,
+    paddingVertical: 3,
   },
   notebookColor: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 2,
     marginRight: 6,
   },
   notebookName: {
-    fontSize: 14,
+    fontSize: 13,
     flexShrink: 1,
   },
 });

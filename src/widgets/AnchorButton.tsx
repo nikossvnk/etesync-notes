@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Button } from "react-native-paper";
-import { useTheme } from "../theme";
+import { fonts, useTheme } from "../theme";
 
 type TypeProps = {
   open: boolean;
@@ -14,9 +14,10 @@ export default function AnchorButton(props: TypeProps) {
 
   return (
     <Button
-      mode="contained"
-      color={theme.colors.primary}
-      labelStyle={{ color: theme.colors.onAccent }}
+      mode="outlined"
+      uppercase={false}
+      style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface, borderRadius: 10 }}
+      labelStyle={{ color: theme.colors.text, fontFamily: fonts.medium, fontSize: 14 }}
       onPress={onPress}
       icon={(open) ? "menu-up" : "menu-down"}
       contentStyle={{ flexDirection: "row-reverse" }}

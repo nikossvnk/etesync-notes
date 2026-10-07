@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, FlatList, Platform, View, BackHandler } from "react-native";
-import { Appbar as PaperAppbar, List, FAB, Avatar } from "react-native-paper";
+import { Appbar as PaperAppbar, List, FAB, Text } from "react-native-paper";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import * as Etebase from "etebase";
@@ -18,9 +19,10 @@ import AppbarButton, { useWideAppbar } from "../widgets/AppbarButton";
 import Menu from "../widgets/Menu";
 import MenuItem from "../widgets/MenuItem";
 import NotFound from "../widgets/NotFound";
+import GroupedRow from "../widgets/GroupedRow";
 import { defaultColor } from "../helpers";
 import { DefaultNavigationProp } from "../RootStackParamList";
-import { useTheme } from "../theme";
+import { fonts, useTheme } from "../theme";
 
 interface PropsType {
   colUid?: string;
@@ -34,6 +36,7 @@ type Notebook = {
 
 export default function NotebookListScreen(props: PropsType) {
   const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
+  const cacheItems = useSelector((state: StoreState) => state.cache.items);
   const notebooks: Notebook[] = React.useMemo(() => Array.from(cacheCollections
     .sort((a, b) => (a.meta!.name!.toUpperCase() >= b.meta!.name!.toUpperCase()) ? 1 : -1)
     .map(({ meta }, uid) => {return { meta, uid }})
@@ -62,7 +65,10 @@ export default function NotebookListScreen(props: PropsType) {
     navigation.setOptions({
       header: (props) => <Appbar {...props} menuFallback />,
       title: notebook?.meta.name || "Notebooks",
-      headerLeft: (notebook) ? () => <PaperAppbar.BackAction containerColor="transparent" onPress={() => setNotebook(undefined)} /> : undefined,
+      // (set by the list of notes)
+      headerTitle: undefined,
+      headerShadowVisible: undefined,
+      headerLeft: (notebook) ? () => <PaperAppbar.BackAction containerColor="transparent" color={theme.colors.text} onPress={() => setNotebook(undefined)} /> : undefined,
       headerRight: () => (
         <RightAction colUid={notebook?.uid} />
       ),
@@ -92,20 +98,32 @@ export default function NotebookListScreen(props: PropsType) {
     return <NotFound />;
   }
 
-  function renderItem({ item }: { item: Notebook }) {
+  function renderItem({ item, index }: { item: Notebook, index: number }) {
+    const first = index === 0;
+    const last = index === notebooks.length - 1;
+    const count = cacheItems.get(item.uid)?.count((x) => !x.isDeleted) ?? 0;
     return (
-      <List.Item
-        title={item.meta.name!}
-        description={item.meta.description}
-        left={({ style }) => (
-          <View style={[style, { marginLeft: 10, marginRight: 10, justifyContent: "center" }]}>
-            <Avatar.Text size={24} label="" theme={{ colors: { primary: item.meta.color || defaultColor } }} />
-          </View>
-        )}
+      <GroupedRow
+        first={first}
+        last={last}
+        accessibilityRole="button"
         onPress={() => {
           setNotebook(item);
         }}
-      />
+        style={styles.row}
+      >
+        <View style={styles.rowInner}>
+          <View style={[styles.color, { backgroundColor: item.meta.color || defaultColor }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.name, { color: theme.colors.text }]} numberOfLines={1}>{item.meta.name!}</Text>
+            {!!item.meta.description && (
+              <Text style={[styles.description, { color: theme.colors.textSecondary }]} numberOfLines={2}>{item.meta.description}</Text>
+            )}
+          </View>
+          <Text style={[styles.count, { color: theme.colors.textMuted }]}>{count}</Text>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textMuted} />
+        </View>
+      </GroupedRow>
     );
   }
 
@@ -119,6 +137,7 @@ export default function NotebookListScreen(props: PropsType) {
       ) : (
         <FlatList
           style={[{ backgroundColor: theme.colors.background }, { flex: 1 }]}
+          contentContainerStyle={styles.list}
           data={notebooks}
           keyExtractor={(item) => item.uid}
           renderItem={renderItem}
@@ -135,7 +154,7 @@ export default function NotebookListScreen(props: PropsType) {
         icon="plus"
         accessibilityLabel="New"
         color={theme.colors.onAccent}
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.colors.accent }]}
         onPress={() => navigation.navigate("CollectionCreate")}
       />
     </>
@@ -145,9 +164,45 @@ export default function NotebookListScreen(props: PropsType) {
 const styles = StyleSheet.create({
   fab: {
     position: "absolute",
-    margin: 16,
+    margin: 20,
     right: 0,
     bottom: 0,
+    borderRadius: 18,
+  },
+  list: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+    padding: 16,
+    paddingBottom: 112,
+  },
+  row: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 14,
+  },
+  rowInner: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  color: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  name: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+  },
+  description: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  count: {
+    fontSize: 13,
+    marginLeft: 8,
+    marginRight: 2,
   },
 });
 

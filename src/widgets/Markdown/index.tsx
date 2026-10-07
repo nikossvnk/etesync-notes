@@ -4,7 +4,7 @@
 import * as React from "react";
 import { Image, Linking, StyleSheet, View, ViewProps } from "react-native";
 import { ActivityIndicator, Checkbox, Text, TouchableRipple } from "react-native-paper";
-import { Theme, useTheme } from "../../theme";
+import { fonts, Theme, useTheme } from "../../theme";
 import MarkdownDisplay, { MarkdownIt, renderRules, RenderRules } from "react-native-markdown-display";
 import { useSelector } from "react-redux";
 import { fontFamilies, FontFamilyKey } from "../../helpers";
@@ -13,51 +13,49 @@ import TaskList from "./markdown-it-tasklist";
 import toggleCheckbox from "./toggle-checkbox";
 
 const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey) => {
+  // The app's font has a face for every weight, the others are made bold
+  const bold = (fontFamilyKey === "regular") ? { fontFamily: fonts.bold } : { fontWeight: "bold" as const };
+  const semibold = (fontFamilyKey === "regular") ? { fontFamily: fonts.semibold } : { fontWeight: "bold" as const };
   const defaults = {
     header: {
-      fontWeight: "bold",
-      marginTop: 20,
-      marginBottom: 10,
+      ...semibold,
+      color: theme.colors.text,
+      marginTop: 18,
+      marginBottom: 8,
     },
-    margin: 16,
+    margin: 14,
   };
 
-  const extraColors = (theme.dark) ? {
-    border: "#555",
-    blockBackground: "#333",
-    blockText: "#ddd",
-    link: "#628EF7",
-  } : {
-    border: "#ccc",
-    blockBackground: "#ddd",
-    blockText: "#333",
-    link: "#0366d6",
+  const extraColors = {
+    border: theme.colors.border,
+    blockBackground: (theme.dark) ? "#232428" : "#F6F6F2",
+    blockText: theme.colors.textBody,
+    link: theme.colors.accent,
   };
 
   return StyleSheet.create({
     body: {
-      color: theme.colors.onSurface,
+      color: theme.colors.textBody,
       fontSize,
+      lineHeight: Math.round(fontSize * 1.6),
       fontFamily: fontFamilies[fontFamilyKey],
     },
     heading1: {
       ...defaults.header,
-      borderBottomColor: extraColors.border,
-      borderBottomWidth: 1,
-      fontSize: fontSize * 2,
-      lineHeight: fontSize * 4,
+      ...bold,
+      fontSize: fontSize * 1.5,
+      lineHeight: Math.round(fontSize * 1.5 * 1.3),
+      letterSpacing: -0.3,
     },
     heading2: {
       ...defaults.header,
-      borderBottomColor: extraColors.border,
-      borderBottomWidth: 1,
-      fontSize: fontSize * 1.5,
-      lineHeight: fontSize * 3,
+      fontSize: fontSize * 1.2,
+      lineHeight: Math.round(fontSize * 1.2 * 1.4),
     },
     heading3: {
       ...defaults.header,
-      fontSize: fontSize * 1.25,
-      lineHeight: fontSize * 2,
+      fontSize: fontSize * 1.1,
+      lineHeight: Math.round(fontSize * 1.1 * 1.4),
     },
     heading4: {
       ...defaults.header,
@@ -73,24 +71,29 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
     },
     hr: {
       backgroundColor: extraColors.border,
-      height: 3,
-      marginVertical: 20,
+      height: 1,
+      marginVertical: 18,
     },
     blockquote: {
-      backgroundColor: "transparent",
-      borderColor: extraColors.border,
-      fontStyle: "italic",
+      backgroundColor: extraColors.blockBackground,
+      borderLeftWidth: 0,
+      borderRadius: 10,
+      marginLeft: 0,
       marginBottom: defaults.margin,
       paddingTop: defaults.margin,
-      paddingHorizontal: defaults.margin,
+      paddingHorizontal: 18,
     },
     paragraph: {
       marginTop: 0,
       marginBottom: defaults.margin,
     },
+    strong: {
+      ...bold,
+      color: theme.colors.text,
+    },
     link: {
       color: extraColors.link,
-      textDecorationLine: "underline",
+      textDecorationLine: "none",
     },
     blocklink: {
       borderColor: extraColors.link,
@@ -98,6 +101,7 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
     code_inline: {
       backgroundColor: extraColors.blockBackground,
       borderWidth: 0,
+      borderRadius: 4,
       color: extraColors.blockText,
       fontFamily: fontFamilies.monospace,
       padding: 3,
@@ -105,6 +109,7 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
     code_block: {
       backgroundColor: extraColors.blockBackground,
       borderColor: extraColors.border,
+      borderRadius: 10,
       color: extraColors.blockText,
       fontFamily: fontFamilies.monospace,
       marginBottom: defaults.margin,
@@ -113,6 +118,7 @@ const getStyles = (theme: Theme, fontSize: number, fontFamilyKey: FontFamilyKey)
     fence: {
       backgroundColor: extraColors.blockBackground,
       borderColor: extraColors.border,
+      borderRadius: 10,
       color: extraColors.blockText,
       fontFamily: fontFamilies.monospace,
       marginBottom: defaults.margin,

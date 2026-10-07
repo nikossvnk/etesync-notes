@@ -20,6 +20,7 @@ import { useSelector } from "react-redux";
 import { StoreState } from "./store";
 import { RootStackParamList } from "./RootStackParamList";
 import { DarkTheme, LightTheme } from "./theme";
+import { useFonts, IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexSans_700Bold } from "@expo-google-fonts/ibm-plex-sans";
 
 enableScreens();
 
@@ -71,6 +72,12 @@ function InnerApp() {
   const darkModePreference = useSelector((state: StoreState) => state.settings.theme);
   const colorScheme = (darkModePreference === "auto") ? colorScheme_ : darkModePreference;
   const theme = (colorScheme === "dark") ? DarkTheme : LightTheme;
+  // The font of the app, which is part of it, so this is quick (and it falls back to the system's if it fails)
+  const [fontsLoaded, fontsError] = useFonts({ IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexSans_700Bold });
+
+  if (!fontsLoaded && !fontsError) {
+    return null;
+  }
 
   return (
     <PaperProvider theme={theme}>

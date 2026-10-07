@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 
 import { StoreState } from "../store";
 import { defaultColor } from "../helpers";
-import { useTheme } from "../theme";
+import { fonts, useTheme } from "../theme";
 
 interface ChipPropsType {
   label: string;
@@ -25,8 +25,8 @@ function Chip(props: ChipPropsType) {
     <TouchableRipple
       borderless
       style={[styles.chip, {
-        backgroundColor: (selected) ? theme.colors.activeBackground : theme.colors.surface,
-        borderColor: (selected) ? theme.colors.activeIcon : theme.colors.disabled,
+        backgroundColor: (selected) ? theme.colors.chipActive : theme.colors.surface,
+        borderColor: (selected) ? theme.colors.chipActive : theme.colors.border,
       }]}
       accessibilityRole="button"
       accessibilityLabel={`Filter: ${label}`}
@@ -37,7 +37,7 @@ function Chip(props: ChipPropsType) {
         {color && (
           <View style={[styles.chipColor, { backgroundColor: color }]} />
         )}
-        <Text style={(selected) ? { color: theme.colors.active, fontWeight: "bold" } : undefined} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.label, (selected) ? { color: theme.colors.onChipActive, fontFamily: fonts.medium } : { color: theme.colors.text }]} numberOfLines={1}>{label}</Text>
       </View>
     </TouchableRipple>
   );
@@ -90,27 +90,30 @@ export default function NotebookFilter(props: PropsType) {
 
 const styles = StyleSheet.create({
   row: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingTop: 14,
     paddingBottom: 2,
   },
   chip: {
-    height: 34,
+    height: 36,
     maxWidth: 220,
     marginRight: 8,
-    borderRadius: 17,
+    borderRadius: 18,
     borderWidth: 1,
     justifyContent: "center",
   },
   chipContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
+  },
+  label: {
+    fontSize: 14,
   },
   chipColor: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 2,
     marginRight: 7,
   },
 });

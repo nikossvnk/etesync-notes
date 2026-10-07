@@ -2,9 +2,9 @@ import * as React from "react";
 import * as Etebase from "etebase";
 import MiniSearch, { Options, SearchResult } from "minisearch";
 import { findAll } from "highlight-words-core";
-import { FlatList, View, Text } from "react-native";
+import { FlatList, StyleSheet, View, Text } from "react-native";
 import { List } from "react-native-paper";
-import { useTheme } from "../theme";
+import { fonts, useTheme } from "../theme";
 import { useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 
@@ -14,6 +14,7 @@ import { useSyncGate } from "../SyncGate";
 import { StoreState } from "../store";
 
 import Link from "../widgets/Link";
+import GroupedRow from "../widgets/GroupedRow";
 import { DefaultNavigationProp } from "../RootStackParamList";
 import SearchToolbar from "../widgets/SearchToolbar";
 
@@ -43,7 +44,7 @@ type HighLightProps = { children: React.ReactNode };
 function Highlight(props: HighLightProps) {
   const theme = useTheme();
   return (
-    <Text style={{ backgroundColor: theme.colors.primary, color: theme.colors.onSurface }}>
+    <Text style={{ backgroundColor: theme.colors.highlight, color: theme.colors.text }}>
       {props.children}
     </Text>
   );
@@ -227,8 +228,9 @@ export default function Search(props: PropsType) {
     return syncGate;
   }
 
-  function renderEntry(param: { item: SearchResult }) {
+  function renderEntry(param: { item: SearchResult, index: number }) {
     const result = param.item;
+    const { index } = param;
     const [colUid, itemUid] = result.id.split(":");
 
     const nameMatches: string[] = [];
@@ -247,11 +249,16 @@ export default function Search(props: PropsType) {
         key={result.id}
         to={`/notebook/${colUid}/note/${itemUid}`}
         renderChild={(props) => (
-          <List.Item
-            {...props}
-            title={(nameMatches.length > 0) ? <Result text={result.name} search={value} matches={nameMatches} /> : result.name}
-            description={(contentMatches.length > 0) ? <Result text={result.content} search={value} matches={contentMatches} /> : result.content}
-          />
+          <GroupedRow {...props} first={index === 0} last={index === entries.length - 1} style={styles.row}>
+            <View>
+              <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
+                {(nameMatches.length > 0) ? <Result text={result.name} search={value} matches={nameMatches} /> : result.name}
+              </Text>
+              <Text style={[styles.description, { color: theme.colors.textSecondary }]} numberOfLines={3}>
+                {(contentMatches.length > 0) ? <Result text={result.content} search={value} matches={contentMatches} /> : result.content}
+              </Text>
+            </View>
+          </GroupedRow>
         )}
       />
     );
@@ -261,6 +268,7 @@ export default function Search(props: PropsType) {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <FlatList
         style={[{ backgroundColor: theme.colors.background }, { flex: 1 }]}
+        contentContainerStyle={styles.list}
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={renderEntry}
@@ -274,3 +282,27 @@ export default function Search(props: PropsType) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  list: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+    padding: 16,
+  },
+  row: {
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  title: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  description: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 3,
+  },
+});

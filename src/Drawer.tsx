@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useSelector } from "react-redux";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
-import { Image, Linking, View, StatusBar } from "react-native";
+import { Image, Linking, View, StatusBar, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Divider, Drawer as PaperDrawer, Text, Paragraph } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,7 +15,6 @@ import ScrollView from "./widgets/ScrollView";
 import ConfirmationDialog from "./widgets/ConfirmationDialog";
 import PrettyFingerprint from "./widgets/PrettyFingerprint";
 import Container from "./widgets/Container";
-import { Subheading } from "./widgets/Typography";
 import DrawerItem from "./widgets/DrawerItem";
 
 import LogoutDialog from "./components/LogoutDialog";
@@ -24,6 +23,7 @@ import * as C from "./constants";
 import { useCredentials } from "./credentials";
 import { serverName } from "./helpers";
 import { RootStackParamList } from "./RootStackParamList";
+import { fonts, useTheme } from "./theme";
 
 type MenuItem = {
   title: string;
@@ -110,27 +110,33 @@ export default function Drawer(props: PropsType) {
   const etebase = useCredentials();
   const loggedIn = !!etebase;
   const syncCount = useSelector((state: StoreState) => state.syncCount);
+  const theme = useTheme();
 
   return (
     <>
       <ScrollView style={{ flex: 1 }}>
-        <SafeAreaView style={{ backgroundColor: "#424242" }}>
+        <SafeAreaView style={{ backgroundColor: theme.colors.sidebar, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }}>
           <View style={{ height: StatusBar.currentHeight || 0 }} />
-          <Container style={{ backgroundColor: "transparent" }}>
-            <Image
-              style={{ width: 48, height: 48, marginBottom: 15 }}
-              source={require("./images/icon.png")}
-            />
-            <Subheading style={{ color: "white" }}>{C.appName}</Subheading>
+          <Container style={{ backgroundColor: "transparent", paddingVertical: 18 }}>
+            <View style={styles.app}>
+              <Image style={styles.appIcon} source={require("./images/icon.png")} />
+              <Text style={[styles.appName, { color: theme.colors.textMuted }]}>{C.appName}</Text>
+            </View>
             {etebase && (
-              <>
-                <Text style={{ color: "white" }}>{etebase.user.username}</Text>
-                {/* The server the account is on */}
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, opacity: 0.8 }} accessibilityLabel={`Server: ${serverName(etebase.serverUrl)}`}>
-                  <MaterialCommunityIcons name="server" size={14} color="white" style={{ marginRight: 6 }} />
-                  <Text style={{ color: "white", flexShrink: 1 }} numberOfLines={1}>{serverName(etebase.serverUrl)}</Text>
+              <View style={styles.account}>
+                {/* The initials of the account */}
+                <View style={[styles.avatar, { backgroundColor: theme.colors.chipActive }]}>
+                  <Text style={[styles.avatarText, { color: theme.colors.onChipActive }]}>{etebase.user.username.slice(0, 2).toUpperCase()}</Text>
                 </View>
-              </>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.username, { color: theme.colors.text }]} numberOfLines={1}>{etebase.user.username}</Text>
+                  {/* The server the account is on */}
+                  <View style={styles.server} accessibilityLabel={`Server: ${serverName(etebase.serverUrl)}`}>
+                    <MaterialCommunityIcons name="server" size={13} color={theme.colors.textMuted} style={{ marginRight: 5 }} />
+                    <Text style={{ color: theme.colors.textMuted, fontSize: 12, flexShrink: 1 }} numberOfLines={1}>{serverName(etebase.serverUrl)}</Text>
+                  </View>
+                </View>
+              </View>
             )}
           </Container>
         </SafeAreaView>
@@ -215,3 +221,45 @@ export default function Drawer(props: PropsType) {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  app: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  appIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
+  appName: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+  },
+  account: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  avatarText: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  username: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+  },
+  server: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 1,
+  },
+});

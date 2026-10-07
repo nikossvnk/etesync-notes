@@ -1,9 +1,10 @@
 import * as React from "react";
 import { I18nManager, StyleSheet, TextInput } from "react-native";
 import { Appbar } from "react-native-paper";
-import { useTheme } from "../theme";
+import { fonts, useTheme } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MenuButton from "./MenuButton";
+import { headerStyle } from "./Appbar";
 
 type PropsType = {
   value: string;
@@ -13,16 +14,17 @@ type PropsType = {
 export default function SearchToolbar(props: PropsType) {
   const { value, onChangeText } = props;
   const theme = useTheme();
-  const textColor = theme.dark ? theme.colors.onSurface : "#000000";
+  const textColor = theme.colors.text;
   const inputRef = React.useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
 
   return (
-    <Appbar.Header statusBarHeight={insets.top}>
+    <Appbar.Header statusBarHeight={insets.top} style={headerStyle(theme)}>
       <MenuButton />
       <Appbar.Action
         containerColor="transparent"
         disabled
+        color={theme.colors.textMuted}
         icon="magnify"
       />
       <TextInput
@@ -41,6 +43,7 @@ export default function SearchToolbar(props: PropsType) {
       />
       <Appbar.Action
         containerColor="transparent"
+        color={theme.colors.text}
         disabled={!value}
         icon="close"
         onPress={() => {
@@ -60,5 +63,8 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     textAlign: I18nManager.isRTL ? "right" : "left",
     minWidth: 0,
-  },
+    fontFamily: fonts.regular,
+    // The bar shows where the text goes already
+    outlineStyle: "none",
+  } as any,
 });

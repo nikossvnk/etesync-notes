@@ -1,7 +1,7 @@
 import * as React from "react";
-import { format } from "date-fns";
-import { FlatList, StyleSheet, View, useWindowDimensions } from "react-native";
-import { Card, List, Text } from "react-native-paper";
+import { differenceInCalendarDays, format, isThisYear, isToday, isYesterday } from "date-fns";
+import { FlatList, StyleSheet, View } from "react-native";
+import { Text } from "react-native-paper";
 import { useSelector } from "react-redux";
 import * as Etebase from "etebase";
 
@@ -13,7 +13,8 @@ import { untitled } from "../notes";
 
 import NotFound from "../widgets/NotFound";
 import Link from "../widgets/Link";
-import { useTheme } from "../theme";
+import GroupedRow from "../widgets/GroupedRow";
+import { fonts, useTheme } from "../theme";
 
 function sortMtime(aIn: CachedItem, bIn: CachedItem) {
   const a = aIn.meta.mtime!;
@@ -100,16 +101,34 @@ function useNotePreview(itemMgr: Etebase.ItemManager | undefined, cache: Uint8Ar
   return preview;
 }
 
-interface NoteCardPropsType {
+// When a note was changed: the time today, then the day of the week, then the date
+export function shortDate(mtime: number) {
+  const now = new Date();
+  if (isToday(mtime)) {
+    return format(mtime, "p");
+  } else if (isYesterday(mtime)) {
+    return "Yesterday";
+  } else if (differenceInCalendarDays(now, mtime) < 7) {
+    return format(mtime, "EEE");
+  } else if (isThisYear(mtime)) {
+    return format(mtime, "MMM d");
+  }
+  return format(mtime, "MMM d, yyyy");
+}
+
+interface NoteRowPropsType {
   item: Entry;
   itemMgr: Etebase.ItemManager | undefined;
   color: string;
   // Only passed when notes of more than one notebook are listed
   notebookName?: string;
+  first: boolean;
+  last: boolean;
 }
 
-const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
-  const { item, itemMgr, color, notebookName } = props;
+const NoteRow = React.memo(function NoteRow(props: NoteRowPropsType) {
+  const { item, itemMgr, color, notebookName, first, last } = props;
+  const theme = useTheme();
   const preview = useNotePreview(itemMgr, item.cache);
   const mtime = item.meta.mtime;
 
@@ -117,33 +136,29 @@ const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
     <Link
       to={`/notebook/${item.colUid}/note/${item.uid}`}
       renderChild={(props) => (
-        <Card
+        <GroupedRow
           {...props}
-          style={styles.card}
+          first={first}
+          last={last}
           accessibilityLabel={item.meta.name || untitled}
+          style={styles.row}
         >
-          <View style={styles.cardInner}>
-            <View style={[styles.cardColor, { backgroundColor: color }]} />
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle} numberOfLines={2}>{item.meta.name || untitled}</Text>
-              <Text style={styles.cardPreview} numberOfLines={4}>{preview}</Text>
-              <View style={styles.cardFooter}>
-                {/* The time moves to a second line when it doesn't fit next to the date */}
-                <View style={styles.cardDate}>
-                  {mtime && (
-                    <>
-                      <Text style={styles.cardSmall}>{format(mtime, "PP")} </Text>
-                      <Text style={styles.cardSmall}>{format(mtime, "p")}</Text>
-                    </>
-                  )}
-                </View>
-                {notebookName && (
-                  <Text style={[styles.cardSmall, styles.cardNotebook]} numberOfLines={1}>{notebookName}</Text>
-                )}
-              </View>
+          <View>
+            <View style={styles.rowTop}>
+              <Text style={[styles.rowTitle, { color: theme.colors.text }]} numberOfLines={1}>{item.meta.name || untitled}</Text>
+              {mtime && <Text style={[styles.rowSmall, { color: theme.colors.textMuted }]}>{shortDate(mtime)}</Text>}
             </View>
+            {!!preview && (
+              <Text style={[styles.rowPreview, { color: theme.colors.textSecondary }]} numberOfLines={2}>{preview}</Text>
+            )}
+            {notebookName && (
+              <View style={styles.rowNotebook}>
+                <View style={[styles.rowColor, { backgroundColor: color }]} />
+                <Text style={[styles.rowSmall, { color: theme.colors.textMuted }]} numberOfLines={1}>{notebookName}</Text>
+              </View>
+            )}
           </View>
-        </Card>
+        </GroupedRow>
       )}
     />
   );
@@ -152,6 +167,10 @@ const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
 interface PropsType {
   colUid?: string;
   sortBy: "name" | "mtime";
+  // Above the notes, scrolling with them
+  header?: React.ReactElement;
+  // Shown when there are no notes at all
+  empty?: React.ReactElement;
 }
 
 export default function NoteList(props: PropsType) {
@@ -160,11 +179,6 @@ export default function NoteList(props: PropsType) {
   const syncGate = useSyncGate();
   const theme = useTheme();
   const etebase = useCredentials();
-  // The width of the list itself, which is less than the window's next to the sidebar
-  const windowWidth = useWindowDimensions().width;
-  const [listWidth, setListWidth] = React.useState<number>();
-  const width = listWidth ?? windowWidth;
-  const numColumns = Math.min(Math.max(Math.floor(width / 200), 2), 6);
 
   // The item managers the cards load their previews with, created as needed
   const itemMgrs = React.useMemo(() => new Map<string, Etebase.ItemManager>(), [etebase, cacheCollections]);
@@ -209,19 +223,19 @@ export default function NoteList(props: PropsType) {
     return <NotFound />;
   }
 
-  function renderEntry(param: { item: Entry }) {
-    const item = param.item;
+  function renderEntry(param: { item: Entry, index: number }) {
+    const { item, index } = param;
     const collection = cacheCollections.get(item.colUid);
 
     return (
-      <View style={[styles.cell, { maxWidth: `${100 / numColumns}%` }]}>
-        <NoteCard
-          item={item}
-          itemMgr={getItemMgr(item.colUid)}
-          color={collection?.meta.color || defaultColor}
-          notebookName={(colUid) ? undefined : collection?.meta.name}
-        />
-      </View>
+      <NoteRow
+        item={item}
+        itemMgr={getItemMgr(item.colUid)}
+        color={collection?.meta.color || defaultColor}
+        notebookName={(colUid) ? undefined : collection?.meta.name}
+        first={index === 0}
+        last={index === entriesList.length - 1}
+      />
     );
   }
 
@@ -229,82 +243,64 @@ export default function NoteList(props: PropsType) {
     <FlatList
       style={[{ backgroundColor: theme.colors.background }, { flex: 1 }]}
       contentContainerStyle={styles.list}
-      // Changing the number of columns on the fly is not supported
-      key={numColumns}
-      numColumns={numColumns}
-      onLayout={(e) => setListWidth(e.nativeEvent.layout.width)}
       data={entriesList}
       keyExtractor={(item) => item.uid}
       renderItem={renderEntry}
       maxToRenderPerBatch={10}
-      ListEmptyComponent={() => (
-        <List.Item
-          title="Notebook is empty"
-        />
+      ListHeaderComponent={props.header}
+      ListEmptyComponent={() => (props.empty && !colUid) ? props.empty : (
+        <Text style={[styles.empty, { color: theme.colors.textMuted }]}>Notebook is empty</Text>
       )}
     />
   );
 }
 
-const cardHeight = 184;
-
 const styles = StyleSheet.create({
   list: {
-    padding: 6,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingTop: 4,
     // Leave room for the button that's floating over the list
-    paddingBottom: 88,
+    paddingBottom: 112,
   },
-  cell: {
-    flex: 1,
-    padding: 6,
+  row: {
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
-  card: {
-    height: cardHeight,
-    borderRadius: 10,
-  },
-  cardInner: {
-    height: cardHeight,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  cardColor: {
-    height: 5,
-  },
-  cardContent: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 9,
-    paddingBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  cardPreview: {
-    flex: 1,
-    overflow: "hidden",
-    fontSize: 13,
-    lineHeight: 18,
-    opacity: 0.7,
-  },
-  cardFooter: {
+  rowTop: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginTop: 6,
+    alignItems: "baseline",
   },
-  cardDate: {
+  rowTitle: {
+    flex: 1,
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    lineHeight: 21,
+    marginRight: 8,
+  },
+  rowPreview: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 3,
+  },
+  rowNotebook: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    flexShrink: 1,
+    alignItems: "center",
+    marginTop: 5,
   },
-  cardSmall: {
-    fontSize: 11,
-    opacity: 0.55,
+  rowColor: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    marginRight: 6,
   },
-  cardNotebook: {
-    maxWidth: "50%",
-    marginLeft: 8,
+  rowSmall: {
+    fontSize: 12,
+  },
+  empty: {
+    padding: 16,
+    fontSize: 15,
   },
 });

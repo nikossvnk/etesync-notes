@@ -11,7 +11,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { StoreState } from "../store";
 import { setSettings } from "../store/actions";
 import { defaultColor, useDeviceBreakpoint } from "../helpers";
-import { useTheme } from "../theme";
+import { cardShadow, fonts, useTheme } from "../theme";
+import { usePendingCount } from "../SyncGate";
 import { getSortFunction } from "./NoteList";
 import { untitled } from "../notes";
 
@@ -101,13 +102,14 @@ function Row(props: RowPropsType) {
       accessibilityState={{ selected: !!selected }}
       // The web doesn't get the state above for buttons
       aria-selected={!!selected}
-      style={[styles.row, { paddingLeft: 8 + indent * 20 }, (selected) ? { backgroundColor: theme.colors.activeBackground } : undefined]}
+      style={[styles.row, { paddingLeft: 6 + indent * 20 }, (selected) ? [{ backgroundColor: theme.colors.surface }, cardShadow] : undefined]}
     >
       <View style={styles.rowContent}>
         {left}
         <Text
           numberOfLines={1}
-          style={[styles.rowLabel, (selected) ? { color: theme.colors.active, fontWeight: "bold" } : undefined, (dim) ? styles.dim : undefined]}
+          style={[styles.rowLabel, { color: (selected) ? theme.colors.text : theme.colors.textBody },
+            (selected) ? { fontFamily: fonts.medium } : undefined, (dim) ? styles.dim : undefined]}
         >
           {label}
         </Text>
@@ -205,37 +207,37 @@ export default function Sidebar() {
     dispatch(setSettings({ sidebarVisible }) as any);
   }
 
-  const borderColor = theme.colors.disabled;
+  const borderColor = theme.colors.border;
+  const pendingCount = usePendingCount();
+  const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
 
   return (
     <View
       testID="sidebar"
-      style={[styles.sidebar, { width: resize.width, backgroundColor: theme.colors.surface, borderRightColor: borderColor },
+      style={[styles.sidebar, { width: resize.width, backgroundColor: theme.colors.sidebar, borderRightColor: borderColor },
         // No text gets selected while dragging the edge
         (resize.dragging && (Platform.OS === "web")) ? ({ userSelect: "none" } as any) : undefined]}
     >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notebooks</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Notebooks</Text>
         <IconButton
-          icon="note-plus-outline"
-          size={20}
-          accessibilityLabel="New note"
-          onPress={() => navigation.navigate("Root", { screen: "NoteCreate", params: (filterBy) ? { colUid: filterBy } : undefined })}
-        />
-        <IconButton
+          containerColor="transparent"
+          iconColor={theme.colors.textMuted}
           icon="notebook-plus-outline"
           size={20}
           accessibilityLabel="New notebook"
           onPress={() => navigation.navigate("Root", { screen: "CollectionCreate" })}
         />
         <IconButton
+          containerColor="transparent"
+          iconColor={theme.colors.textMuted}
           icon="chevron-double-left"
           size={20}
           accessibilityLabel="Hide the sidebar"
           onPress={() => setVisible(false)}
         />
       </View>
-      <View style={[styles.search, { borderColor }]}>
+      <View style={[styles.search, { borderColor, backgroundColor: theme.colors.surface }]}>
         <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.inactiveIcon} />
         <TextInput
           value={filter}
@@ -246,10 +248,22 @@ export default function Sidebar() {
           style={[styles.searchInput, { color: theme.colors.onSurface }]}
         />
         {(filter !== "") && (
-          <IconButton icon="close" size={16} style={styles.smallButton} accessibilityLabel="Clear" onPress={() => setFilter("")} />
+          <IconButton containerColor="transparent" iconColor={theme.colors.textMuted} icon="close" size={16} style={styles.smallButton} accessibilityLabel="Clear" onPress={() => setFilter("")} />
         )}
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
+      <TouchableRipple
+        borderless
+        accessibilityRole="button"
+        accessibilityLabel="New note"
+        style={[styles.newNote, { backgroundColor: theme.colors.accent }]}
+        onPress={() => navigation.navigate("Root", { screen: "NoteCreate", params: (filterBy) ? { colUid: filterBy } : undefined })}
+      >
+        <View style={styles.newNoteInner}>
+          <MaterialCommunityIcons name="plus" size={18} color={theme.colors.onAccent} />
+          <Text style={[styles.newNoteText, { color: theme.colors.onAccent }]}>New note</Text>
+        </View>
+      </TouchableRipple>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tree}>
         {(filter === "") && (
           <Row
             label="All notes"
@@ -272,6 +286,8 @@ export default function Sidebar() {
                 left={(
                   <>
                     <IconButton
+                      containerColor="transparent"
+                      iconColor={theme.colors.textMuted}
                       icon={(open) ? "chevron-down" : "chevron-right"}
                       size={18}
                       style={styles.smallButton}
@@ -283,8 +299,10 @@ export default function Sidebar() {
                 )}
                 right={(
                   <>
-                    <Text style={[styles.count, styles.dim]}>{notebook.count}</Text>
+                    <Text style={[styles.count, { color: theme.colors.textMuted }]}>{notebook.count}</Text>
                     <IconButton
+                      containerColor="transparent"
+                      iconColor={theme.colors.textMuted}
                       icon="plus"
                       size={16}
                       style={styles.smallButton}
@@ -315,6 +333,26 @@ export default function Sidebar() {
           <Text style={[styles.empty, styles.dim]}>{(filter !== "") ? "No notes found" : "No notebooks yet"}</Text>
         )}
       </ScrollView>
+      <View style={[styles.footer, { borderTopColor: borderColor }]}>
+        <TouchableRipple
+          borderless
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          style={styles.footerButton}
+          onPress={() => navigation.navigate("Root", { screen: "Settings" })}
+        >
+          <View style={styles.rowContent}>
+            <MaterialCommunityIcons name="cog-outline" size={18} color={theme.colors.textBody} style={styles.icon} />
+            <Text style={[styles.rowLabel, { color: theme.colors.textBody }]}>Settings</Text>
+          </View>
+        </TouchableRipple>
+        <View style={styles.syncState}>
+          <View style={[styles.syncDot, { backgroundColor: (pendingCount > 0) ? theme.colors.disabled : theme.colors.success }]} />
+          <Text style={[styles.count, { color: theme.colors.textMuted }]}>
+            {(isSyncing) ? "Syncing…" : (pendingCount > 0) ? `${pendingCount} to sync` : "Synced"}
+          </Text>
+        </View>
+      </View>
       <View
         {...resize.handlers}
         testID="sidebar-resize"
@@ -331,8 +369,10 @@ export function SidebarShowButton() {
   const theme = useTheme();
   const dispatch = useDispatch();
   return (
-    <View style={[styles.hidden, { backgroundColor: theme.colors.surface, borderRightColor: theme.colors.disabled }]}>
+    <View style={[styles.hidden, { backgroundColor: theme.colors.sidebar, borderRightColor: theme.colors.border }]}>
       <IconButton
+        containerColor="transparent"
+        iconColor={theme.colors.textMuted}
         icon="chevron-double-right"
         size={20}
         accessibilityLabel="Show the sidebar"
@@ -369,29 +409,78 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "bold",
+    fontFamily: fonts.semibold,
+    fontSize: 15,
   },
   search: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 12,
     marginBottom: 8,
-    paddingLeft: 8,
+    paddingLeft: 10,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
+    minHeight: 38,
+  },
+  newNote: {
+    marginHorizontal: 12,
+    marginBottom: 14,
+    borderRadius: 10,
+  },
+  newNoteInner: {
+    height: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  newNoteText: {
+    fontFamily: fonts.semibold,
+    fontSize: 14,
+  },
+  tree: {
+    paddingHorizontal: 8,
+    paddingBottom: 12,
+  },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  footerButton: {
+    flex: 1,
     minHeight: 36,
+    justifyContent: "center",
+    borderRadius: 8,
+    paddingLeft: 4,
+  },
+  syncState: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+  },
+  syncDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 6,
   },
   searchInput: {
     flex: 1,
     paddingHorizontal: 6,
     paddingVertical: 6,
     fontSize: 14,
-  },
+    fontFamily: fonts.regular,
+    // The box around it shows where the text goes already
+    outlineStyle: "none",
+  } as any,
   row: {
     paddingRight: 4,
     minHeight: 34,
     justifyContent: "center",
+    borderRadius: 8,
   },
   rowContent: {
     flexDirection: "row",
@@ -411,7 +500,7 @@ const styles = StyleSheet.create({
   color: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: 3,
     marginRight: 8,
   },
   count: {

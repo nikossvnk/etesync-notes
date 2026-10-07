@@ -1,5 +1,5 @@
-// A note's title and notebook are changed in the note itself: the title in the bar at the top, the
-// notebook next to it (wide screens) or under it (narrow screens). New notes open there right away.
+// A note's title and notebook are changed in the note itself, above its content: the notebook (and
+// the date) and under it the title. New notes open there right away.
 const { launch, session, run, check, api, unique, config, Etebase } = require("../lib");
 
 // The notes on the server, by notebook: { notebook: { name: content } }, without the deleted ones
@@ -32,10 +32,11 @@ run(async () => {
     const title = A.p.locator('input[aria-label="Title"] >> visible=true');
     const notebookButton = A.p.getByRole("button", { name: /^Notebook: / }).locator("visible=true");
     const notes = () => serverNotes([first, second]);
-    // On wide screens the notebook is in the bar at the top, on narrow ones under it
-    const inBar = async () => {
-      const box = await A.p.locator('[aria-label^="Notebook: "] >> visible=true').first().boundingBox();
-      return box.y < 50;
+    // The notebook is above the title, under the bar at the top
+    const aboveTitle = async () => {
+      const notebook = await A.p.locator('[aria-label^="Notebook: "] >> visible=true').first().boundingBox();
+      const titleBox = await title.first().boundingBox();
+      return notebook.y > 50 && notebook.y + notebook.height <= titleBox.y + 2;
     };
 
     // A new note opens right away, in the editor, with the cursor in the title
@@ -45,7 +46,7 @@ run(async () => {
     check(`${tag}: in the editor, with the title being typed in`, await title.count() === 1 && await A.vis("textarea").count() === 1 &&
       await A.p.evaluate(() => document.activeElement?.getAttribute("aria-label")) === "Title");
     check(`${tag}: the notebook can be chosen there`, await notebookButton.count() === 1);
-    check(`${tag}: the notebook is ${(viewport) ? "next to the title" : "under the bar"}`, (await inBar()) === !!viewport);
+    check(`${tag}: the notebook is above the title, in the note`, await aboveTitle());
     await A.chooseNotebook(first);
     check(`${tag}: choosing the notebook of the new note`, (await A.notebookOfNote()) === first, await A.notebookOfNote());
     await title.fill("Groceries " + n); await title.press("Enter"); await A.wait(300);
@@ -64,7 +65,7 @@ run(async () => {
 
     // View mode: the title and notebook are shown, but can't be changed
     await A.open("Existing " + n);
-    check(`${tag}: in the viewer the title is in the bar`, await A.p.getByText("Existing " + n, { exact: true }).locator("visible=true").count() > 0 && await title.count() === 0);
+    check(`${tag}: in the viewer the title is shown above the note`, await A.p.getByRole("heading", { name: "Existing " + n, exact: true }).locator("visible=true").count() > 0 && await title.count() === 0);
     check(`${tag}: and the notebook is shown, but isn't a button`, (await A.notebookOfNote()) === first && await notebookButton.count() === 0);
 
     // Renaming a note in the editor
