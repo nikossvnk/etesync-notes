@@ -26,7 +26,7 @@ import FontSelector from "../widgets/FontSelector";
 import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
 import { useTheme } from "../theme";
-import { exportNotes, saveFile } from "../import-export";
+import { exportNotes, importNotes, pickFile, readNotesZip, saveFile } from "../import-export";
 
 function DarkModePreferenceSelector() {
   const dispatch = useDispatch();
@@ -254,6 +254,7 @@ const SettingsScreen = function _SettingsScreen() {
   const settings = useSelector((state: StoreState) => state.settings);
 
   const [exporting, setExporting] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
 
   const loggedIn = !!etebase;
 
@@ -269,6 +270,34 @@ const SettingsScreen = function _SettingsScreen() {
       dispatch(pushMessage({ message: `Export failed: ${e.message}`, severity: "error" }) as any);
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function onImport() {
+    setImporting(true);
+    try {
+      const data = await pickFile([".zip", "application/zip", "application/x-zip-compressed"]);
+      if (!data) {
+        return;
+      }
+      const notes = readNotesZip(data);
+      if (notes.length === 0) {
+        dispatch(pushMessage({ message: "There are no notes (Markdown files) in this file", severity: "warning" }) as any);
+        return;
+      }
+      const { imported, skipped, notebooksCreated } = await importNotes(etebase!, store.getState() as unknown as StoreState, notes);
+      const parts = [`Imported ${imported} ${(imported === 1) ? "note" : "notes"}`];
+      if (notebooksCreated > 0) {
+        parts.push(`${notebooksCreated} new ${(notebooksCreated === 1) ? "notebook" : "notebooks"}`);
+      }
+      if (skipped > 0) {
+        parts.push(`${skipped} already there`);
+      }
+      dispatch(pushMessage({ message: parts.join(", "), severity: "success" }) as any);
+    } catch (e) {
+      dispatch(pushMessage({ message: `Import failed: ${e.message}`, severity: "error" }) as any);
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -302,6 +331,12 @@ const SettingsScreen = function _SettingsScreen() {
               description={(exporting) ? "Exporting…" : "Save all of your notes as Markdown files in a zip, a folder for every notebook"}
               disabled={exporting}
               onPress={onExport}
+            />
+            <List.Item
+              title="Import Notes"
+              description={(importing) ? "Importing…" : "Add notes from a zip of Markdown files, a folder for every notebook (as the export makes it)"}
+              disabled={importing}
+              onPress={onImport}
             />
           </List.Section>
         )}
