@@ -35,6 +35,7 @@ Options (environment variables):
 |---|---|---|
 | `PORT` | `8090` | The port on localhost |
 | `BROWSER` | the first one found of Chromium, Chrome, Brave, Edge, Firefox | The browser the shortcut opens. Chromium-based browsers open it in an app window, Firefox in a new window |
+| `LOW_MEMORY` | `1` | Chromium-based browsers get flags that make them use a bit less memory (no spare page process, at most two, no background downloads, updates or sync); `0` leaves them out |
 
 Then open "EteSync Notes" from the applications menu or the desktop, and log in with the server URL
 (under "Advanced settings"), e.g. `https://etebase.example.com`.
