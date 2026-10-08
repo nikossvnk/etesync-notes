@@ -47,11 +47,6 @@ export const externalMenuItems = [
     link: C.reportIssue,
     icon: "bug",
   },
-  {
-    title: "Contact developer",
-    link: `mailto:${C.contactEmail}`,
-    icon: "email",
-  },
 ];
 
 if (!C.genericMode) {

@@ -26,18 +26,22 @@ import PasswordInput from "./widgets/PasswordInput";
 import LinkButton from "./widgets/LinkButton";
 import { useCredentials } from "./credentials";
 
-function emailDevelopers(error: Error, logs: string | undefined) {
-  const subject = encodeURIComponent(`${C.appName}: Crash Report`);
-  const bodyJson = {
-    version: expo.version,
-    error: {
-      message: error.message,
-      stack: error.stack?.toString(),
-      logs,
-    },
-  };
-  const body = encodeURIComponent(JSON.stringify(bodyJson));
-  Linking.openURL(`mailto:${C.reportsEmail}?subject=${subject}&body=${body}`);
+// Opens a new issue about the crash, with what went wrong filled in (it's only sent once it's
+// submitted there). Without the logs, as issues are public: they can be added by hand.
+function reportCrash(error: Error) {
+  const title = encodeURIComponent(`Crash: ${error.message}`.slice(0, 200));
+  const body = encodeURIComponent([
+    `Version: ${expo.version}`,
+    "",
+    "What happened before the crash:",
+    "",
+    "",
+    "Error:",
+    "```",
+    `${error.message}\n${error.stack?.toString() ?? ""}`.slice(0, 4000),
+    "```",
+  ].join("\n"));
+  Linking.openURL(`${C.reportIssue}/new?title=${title}&body=${body}`);
 }
 
 function SessionExpiredDialog() {
@@ -142,7 +146,7 @@ function ErrorBoundaryInner(props: React.PropsWithChildren<{ error: Error | unde
         <Container>
           <Title>Something went wrong!</Title>
           <View style={{ marginVertical: 15, flexDirection: "row", justifyContent: "space-evenly", flexWrap: "wrap" }}>
-            <Button mode="contained" style={buttonStyle} onPress={() => emailDevelopers(error, logs)}>Report Bug</Button>
+            <Button mode="contained" style={buttonStyle} onPress={() => reportCrash(error)}>Report Bug</Button>
             <Button mode="contained" style={buttonStyle} onPress={() => Clipboard.setString(content)}>Copy Text</Button>
             <Button mode="contained" style={buttonStyle} onPress={() => Updates.reloadAsync()}>Reload App</Button>
             <Button mode="contained" style={buttonStyle} onPress={async () => {

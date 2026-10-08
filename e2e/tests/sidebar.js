@@ -53,7 +53,7 @@ run(async () => {
 
   // What the drawer has is in the account's menu, and the settings at the bottom
   await row("Account menu").click(); await A.wait(800);
-  for (const item of ["Invitations", "Show Fingerprint", "Logout", "Report issue", "Contact developer"]) {
+  for (const item of ["Invitations", "Show Fingerprint", "Logout", "Report issue"]) {
     check(`the account menu has ${item}`, await A.p.getByText(item, { exact: true }).locator("visible=true").count() > 0);
   }
   await A.p.getByRole("menuitem", { name: "Invitations" }).locator("visible=true").first().click(); await A.wait(1500);

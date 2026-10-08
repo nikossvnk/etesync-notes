@@ -161,8 +161,8 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
   });
   const vis = (s) => p.locator(s + " >> visible=true").first();
   const btn = (re) => p.getByRole("button", { name: re }).locator("visible=true").first();
-  // The text of the page without the drawer
-  const text = async () => (await p.innerText("body")).replace(/\s+/g, " ").split("Contact developer")[1] || "";
+  // The text of the page without the drawer (which ends with "Report issue")
+  const text = async () => (await p.innerText("body")).replace(/\s+/g, " ").split("Report issue")[1] || "";
   const wait = (ms) => p.waitForTimeout(ms);
   const s = { tag, ctx, p, vis, btn, text, wait };
 
