@@ -1,6 +1,16 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.0.0
+* Bookmarks: a tab next to the notes with saved links, which can be searched, filtered by tag, opened, edited and deleted (with undo). The title can be taken from the page
+* Links shared from other apps ("Save to EteSync" in the share menu, or the Bookmarks shortcut) are saved from a sheet over that app, and a link that's saved already is updated rather than added twice
+* A new design: a calm palette, IBM Plex Sans, and lists of rows
+* Phones: the actions are in the bars, and the notebooks in the menu
+* The title and the body of a note are told apart in the editor, which has a formatting bar
+* Select several notes to delete them at once
+* Export all of the notes, and import notes from a zip, from the settings
+* The app is now made for phones: the layout for wide screens is gone (the web version is only used for testing)
+
 ## Version 1.9.0
 * New notes open right away: the title is written in the bar at the top, and the notebook is chosen next to it (or under it on phones). This replaces the screens to edit the properties of a note and to move it
 * A note without a title is named after its first line
