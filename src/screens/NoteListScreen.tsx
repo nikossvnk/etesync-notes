@@ -16,7 +16,6 @@ import { useCredentials } from "../credentials";
 
 import NoteList from "../components/NoteList";
 import NotebookFilter from "../components/NotebookFilter";
-import { useSidebarShown } from "../components/Sidebar";
 import Appbar from "../widgets/Appbar";
 import AppbarButton from "../widgets/AppbarButton";
 import { DefaultNavigationProp } from "../RootStackParamList";
@@ -41,8 +40,6 @@ export default function NoteListScreen(props: PropsType) {
   const navigation = useNavigation<DefaultNavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
-  // The sidebar has the notebooks to choose from already
-  const sidebarShown = useSidebarShown();
   const notebookName = useSelector((state: StoreState) => (filterBy) ? state.cache.collections.get(filterBy)?.meta.name : undefined);
   const count = useSelector((state: StoreState) => {
     let ret = 0;
@@ -132,43 +129,40 @@ export default function NoteListScreen(props: PropsType) {
       headerLeft: undefined,
       header: (props) => <Appbar {...props} menuFallback />,
       title: "Notes",
-      // The title is shown in big under the bar, or above the list next to the sidebar
+      // The title is shown in big under the bar, which is one with it
       headerTitle: () => <View style={{ flex: 1 }} />,
-      // On phones the bar and the title under it are one
-      headerShadowVisible: sidebarShown,
+      headerShadowVisible: false,
       headerRight: () => (
         <RightAction />
       ),
     });
-  }, [active, navigation, sidebarShown, selecting, selection.size, theme]);
+  }, [active, navigation, selecting, selection.size, theme]);
 
   if (syncGate) {
     return syncGate;
   }
 
-  const title = notebookName ?? ((sidebarShown) ? "All notes" : "Notes");
+  const title = notebookName ?? "Notes";
   const countText = `${count} ${(count === 1) ? "note" : "notes"}`;
 
   return (
     <>
-      {!sidebarShown && (
-        <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
-          <Text style={[styles.bigTitle, { color: theme.colors.text }]} accessibilityRole="header" numberOfLines={1}>{title}</Text>
-          <TouchableRipple
-            borderless
-            onPress={onSearch}
-            accessibilityRole="search"
-            accessibilityLabel="Search notes"
-            style={[styles.search, { backgroundColor: theme.colors.field }]}
-          >
-            <View style={styles.searchInner}>
-              <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.textMuted} />
-              <Text style={[styles.searchText, { color: theme.colors.textMuted }]} numberOfLines={1}>Search {countText}</Text>
-            </View>
-          </TouchableRipple>
-        </View>
-      )}
-      {!sidebarShown && <NotebookFilter
+      <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+        <Text style={[styles.bigTitle, { color: theme.colors.text }]} accessibilityRole="header" numberOfLines={1}>{title}</Text>
+        <TouchableRipple
+          borderless
+          onPress={onSearch}
+          accessibilityRole="search"
+          accessibilityLabel="Search notes"
+          style={[styles.search, { backgroundColor: theme.colors.field }]}
+        >
+          <View style={styles.searchInner}>
+            <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.textMuted} />
+            <Text style={[styles.searchText, { color: theme.colors.textMuted }]} numberOfLines={1}>Search {countText}</Text>
+          </View>
+        </TouchableRipple>
+      </View>
+      <NotebookFilter
         value={filterBy}
         onChange={(colUid) => {
           dispatch(setSettings({
@@ -178,18 +172,11 @@ export default function NoteListScreen(props: PropsType) {
             },
           }) as any);
         }}
-      />}
+      />
       <NoteList
         colUid={filterBy}
         sortBy={sortBy}
-        header={(sidebarShown) ? (
-          <View style={styles.listHeader}>
-            <Text style={[styles.title, { color: theme.colors.text }]} accessibilityRole="header" numberOfLines={1}>{title}</Text>
-            <Text style={[styles.count, { color: theme.colors.textMuted }]}>{countText}</Text>
-          </View>
-        ) : (
-          <View style={styles.listGap} />
-        )}
+        header={<View style={styles.listGap} />}
         empty={<EmptyNotes onCreate={() => navigation.navigate("NoteCreate")} />}
         selection={selection}
         onSelect={longPress}
@@ -221,7 +208,7 @@ export default function NoteListScreen(props: PropsType) {
 }
 
 // When there are no notes at all yet
-export function EmptyNotes(props: { onCreate: () => void }) {
+function EmptyNotes(props: { onCreate: () => void }) {
   const theme = useTheme();
 
   return (
@@ -298,19 +285,6 @@ const styles = StyleSheet.create({
   searchText: {
     fontSize: 15,
     marginLeft: 10,
-  },
-  listHeader: {
-    paddingHorizontal: 4,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  title: {
-    fontFamily: fonts.semibold,
-    fontSize: 20,
-    lineHeight: 28,
-  },
-  count: {
-    fontSize: 12,
   },
   listGap: {
     height: 12,

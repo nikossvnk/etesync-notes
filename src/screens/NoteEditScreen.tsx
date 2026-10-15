@@ -32,7 +32,6 @@ import AppbarButton from "../widgets/AppbarButton";
 import { defaultColor, fontFamilies } from "../helpers";
 import Select from "../widgets/Select";
 import { RootStackParamList } from "../RootStackParamList";
-import { useWideLayout } from "../components/WideLayout";
 import FormatBar from "../widgets/FormatBar";
 import { Edit } from "../markdownFormat";
 import { canShare, shareItem } from "../import-export";
@@ -85,7 +84,6 @@ export default function NoteEditScreen(props: PropsType) {
   const navigation = useNavigation<NavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
-  const wideLayout = useWideLayout();
 
   const cacheCollection = (colUid) ? cacheItems.get(colUid) : undefined;
   const cacheItem = (cacheCollection && itemUid) ? cacheCollection.get(itemUid) : undefined;
@@ -132,18 +130,8 @@ export default function NoteEditScreen(props: PropsType) {
     const name = (cacheItem) ? (cacheItem.meta.name || untitled) : "Note Not Found";
     navigation.setOptions({
       title: name,
-      // The title and notebook are in the note itself, wide screens show where it is in the bar
-      headerTitle: () => (
-        <View style={[styles.headerTitle, styles.breadcrumb]}>
-          {(wideLayout && cacheItem) && (
-            <>
-              <Text style={[styles.crumb, { color: theme.colors.textMuted }]} numberOfLines={1}>{cacheCollections.get(colUid)?.meta.name}</Text>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.textMuted} />
-              <Text style={[styles.crumb, styles.crumbTitle, { color: theme.colors.text }]} numberOfLines={1}>{cacheItem.meta.name || untitled}</Text>
-            </>
-          )}
-        </View>
-      ),
+      // The title and notebook are in the note itself
+      headerTitle: () => <View style={styles.headerTitle} />,
       headerRight: () => (
         <RightAction
           viewMode={viewMode}
@@ -155,7 +143,7 @@ export default function NoteEditScreen(props: PropsType) {
         />
       ),
     });
-  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, loading, wideLayout, theme]);
+  }, [navigation, colUid, cacheItem, viewMode, setLastViewMode, changed, title, content, loading]);
 
   // Write the content to the local cache and queue the note to be pushed to the server
   async function saveLocally() {
@@ -417,7 +405,7 @@ export default function NoteEditScreen(props: PropsType) {
   return (
     <>
       {viewMode ? (
-        <ScrollView keyboardAware style={{ backgroundColor: theme.colors.sidebar }} contentContainerStyle={[styles.desk, (wideLayout) && styles.deskWide]}>
+        <ScrollView keyboardAware style={{ backgroundColor: theme.colors.sidebar }} contentContainerStyle={styles.desk}>
           <Pressable onPress={editOnClick} style={[styles.sheet, styles.viewerPressable, sheetColors]} accessible={false} {...{ tabIndex: -1 }}>
             {head}
             <View testID="note-viewer" style={styles.viewer}>
@@ -430,7 +418,7 @@ export default function NoteEditScreen(props: PropsType) {
         </ScrollView>
       ) : (
         <>
-          <FormatBar onFormat={applyFormat} onDone={(wideLayout) ? undefined : () => setLastViewMode(true)} />
+          <FormatBar onFormat={applyFormat} onDone={() => setLastViewMode(true)} />
           <Pressable
             ref={deskRef}
             // A click around the note (not in it) ends editing
@@ -441,7 +429,7 @@ export default function NoteEditScreen(props: PropsType) {
             }}
             accessible={false}
             {...{ tabIndex: -1 }}
-            style={[styles.desk, (wideLayout) && styles.deskWide, styles.editorDesk, { backgroundColor: theme.colors.sidebar }, styles.deskCursor]}
+            style={[styles.desk, styles.editorDesk, { backgroundColor: theme.colors.sidebar }, styles.deskCursor]}
           >
             <View style={[styles.sheet, styles.editorSheet, sheetColors]}>
               {head}
@@ -657,27 +645,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
   },
-  breadcrumb: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingLeft: 8,
-    minWidth: 0,
-  },
-  crumb: {
-    fontSize: 13,
-    flexShrink: 1,
-  },
-  crumbTitle: {
-    fontFamily: fonts.medium,
-  },
   // What's behind the note, which is a bit darker than it
   desk: {
     flexGrow: 1,
     padding: 10,
-  },
-  deskWide: {
-    padding: 24,
   },
   // The note: a sheet that uses the width there is, up to what's still comfortable to read
   sheet: {

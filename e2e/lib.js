@@ -148,8 +148,8 @@ exports.api = {
 };
 
 // A browser session (its own context, so like a separate device) with helpers for driving the app
-// (900 pixels wide by default, which is too narrow for the sidebar of wide screens)
-exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) => {
+// (the size of a phone by default)
+exports.session = async (browser, tag, viewport = { width: 412, height: 860 }) => {
   const ctx = await browser.newContext({ viewport });
   const p = await ctx.newPage();
   p.setDefaultTimeout(10000);
@@ -224,8 +224,7 @@ exports.session = async (browser, tag, viewport = { width: 900, height: 700 }) =
   // Creates a note with the "New" button of the notes list, which opens it in the editor, with the
   // title (if any) typed in, and in the given notebook (or the preselected one)
   s.createNote = async (name, notebook) => {
-    // ("New note" in the sidebar of wide screens)
-    await btn(/^new( note)?$/i).click(); await wait(2500);
+    await btn(/^new$/i).click(); await wait(2500);
     if (name) {
       await vis('input[aria-label="Title"]').fill(name); await wait(300);
     }

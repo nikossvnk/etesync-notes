@@ -56,6 +56,5 @@ server), rather than relying on what's already in the account. To check what a n
 `noteText()` or `viewerText()`: they fail when a saved note doesn't open in the viewer or doesn't
 show its text there, so that "opening a note shows it" is part of every test that reads a note.
 
-Sessions are 900 pixels wide, which is the layout of phones and small tablets. For the layout of wide
-screens (the sidebar, and the actions in the bars instead of menus), pass a size:
-`session(browser, "A", { width: 1280, height: 800 })`, as `sidebar.js` and `wide-actions.js` do.
+Sessions are the size of a phone (412 by 860 pixels). Another size can be passed:
+`session(browser, "A", { width: 900, height: 700 })`.

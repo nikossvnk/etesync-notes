@@ -36,9 +36,6 @@ import { StoreState } from "./store";
 import { RootStackParamList } from "./RootStackParamList";
 import MenuButton from "./widgets/MenuButton";
 import Appbar from "./widgets/Appbar";
-import Sidebar, { SidebarShowButton } from "./components/Sidebar";
-import NotesColumn from "./components/NotesColumn";
-import { SearchProvider, useWideLayout } from "./components/WideLayout";
 import { useTheme } from "./theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -47,9 +44,6 @@ const Stack = createStackNavigator<RootStackParamList>();
 export default React.memo(function RootNavigator() {
   const dispatch = useDispatch();
   const etebase = useCredentials();
-  // Wide screens have the sidebar and the notes in columns next to the screens
-  const wideLayout = useWideLayout();
-  const sidebarVisible = useSelector((state: StoreState) => state.settings.sidebarVisible);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -81,165 +75,161 @@ export default React.memo(function RootNavigator() {
     return () => window.removeEventListener("online", onOnline);
   }, [etebase]);
 
+  // Above the system's navigation bar (on Android the app is drawn behind it)
   return (
-    <SearchProvider>
-      {/* Above the system's navigation bar (on Android the app is drawn behind it) */}
-      <View style={{ flex: 1, flexDirection: "row", paddingBottom: insets.bottom, backgroundColor: theme.colors.background }}>
-        {wideLayout && ((sidebarVisible) ? <Sidebar /> : <SidebarShowButton />)}
-        {wideLayout && <NotesColumn />}
-        <View style={{ flex: 1 }}>
-          <Stack.Navigator
-            screenOptions={{
-              header: (props) => <Appbar {...props} menuFallback />,
-              cardStyle: {
-                maxHeight: "100%",
-                // (instead of the navigation's own, which is light also in dark mode)
-                backgroundColor: theme.colors.background,
-              },
+    <View style={{ flex: 1, flexDirection: "row", paddingBottom: insets.bottom, backgroundColor: theme.colors.background }}>
+      <View style={{ flex: 1 }}>
+        <Stack.Navigator
+          screenOptions={{
+            header: (props) => <Appbar {...props} menuFallback />,
+            cardStyle: {
+              maxHeight: "100%",
+              // (instead of the navigation's own, which is light also in dark mode)
+              backgroundColor: theme.colors.background,
+            },
+          }}
+        >
+          {(etebase === null) ? (
+            <>
+              <Stack.Screen
+                name="Login"
+                component={LoginScreen}
+                options={{
+                  title: "Login",
+                  headerLeft: () => (
+                    <MenuButton />
+                  ),
+                }}
+              />
+              <Stack.Screen
+                name="Signup"
+                component={SignupScreen}
+                options={{
+                  title: "Signup",
+                  headerLeft: () => (
+                    <MenuButton />
+                  ),
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Stack.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{
+                  title: C.appName,
+                  headerLeft: () => (
+                    <MenuButton />
+                  ),
+                }}
+              />
+              <Stack.Screen
+                name="Search"
+                component={SearchRoute}
+              />
+              <Stack.Screen
+                name="Notebooks"
+                component={NotebooksRoute}
+                options={{
+                  title: "Notebooks",
+                }}
+              />
+              <Stack.Screen
+                name="Collection"
+                component={NotebooksRoute}
+                options={{
+                  title: C.appName,
+                  headerLeft: () => (
+                    <MenuButton />
+                  ),
+                }}
+              />
+              <Stack.Screen
+                name="NoteCreate"
+                component={NoteCreateScreen}
+              />
+              <Stack.Screen
+                name="NoteProps"
+                component={NoteRedirectScreen}
+              />
+              <Stack.Screen
+                name="NoteMove"
+                component={NoteRedirectScreen}
+              />
+              <Stack.Screen
+                name="CollectionEdit"
+                component={CollectionEditScreen}
+              />
+              <Stack.Screen
+                name="CollectionCreate"
+                component={CollectionEditScreen}
+              />
+              <Stack.Screen
+                name="CollectionChangelog"
+                component={CollectionChangelogScreen}
+                options={{
+                  title: "Manage Notebook",
+                }}
+              />
+              <Stack.Screen
+                name="CollectionMembers"
+                component={CollectionMembersScreen}
+                options={{
+                  title: "Collection Members",
+                }}
+              />
+              <Stack.Screen
+                name="NoteEdit"
+                component={NoteEditScreen}
+              />
+              <Stack.Screen
+                name="Invitations"
+                component={InvitationsScreen}
+                options={{
+                  title: "Collection Invitations",
+                }}
+              />
+              <Stack.Screen
+                name="Password"
+                component={ChangePasswordScreen}
+                options={{
+                  title: "Change Your Account Password",
+                }}
+              />
+            </>
+          )}
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="About" component={AboutScreen} />
+          <Stack.Screen
+            name="DebugLogs"
+            component={DebugLogsScreen}
+            options={{
+              title: "View Debug Logs",
             }}
-          >
-            {(etebase === null) ? (
-              <>
-                <Stack.Screen
-                  name="Login"
-                  component={LoginScreen}
-                  options={{
-                    title: "Login",
-                    headerLeft: () => (
-                      <MenuButton />
-                    ),
-                  }}
-                />
-                <Stack.Screen
-                  name="Signup"
-                  component={SignupScreen}
-                  options={{
-                    title: "Signup",
-                    headerLeft: () => (
-                      <MenuButton />
-                    ),
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <Stack.Screen
-                  name="Home"
-                  component={HomeScreen}
-                  options={{
-                    title: C.appName,
-                    headerLeft: () => (
-                      <MenuButton />
-                    ),
-                  }}
-                />
-                <Stack.Screen
-                  name="Search"
-                  component={SearchRoute}
-                />
-                <Stack.Screen
-                  name="Notebooks"
-                  component={NotebooksRoute}
-                  options={{
-                    title: "Notebooks",
-                  }}
-                />
-                <Stack.Screen
-                  name="Collection"
-                  component={NotebooksRoute}
-                  options={{
-                    title: C.appName,
-                    headerLeft: () => (
-                      <MenuButton />
-                    ),
-                  }}
-                />
-                <Stack.Screen
-                  name="NoteCreate"
-                  component={NoteCreateScreen}
-                />
-                <Stack.Screen
-                  name="NoteProps"
-                  component={NoteRedirectScreen}
-                />
-                <Stack.Screen
-                  name="NoteMove"
-                  component={NoteRedirectScreen}
-                />
-                <Stack.Screen
-                  name="CollectionEdit"
-                  component={CollectionEditScreen}
-                />
-                <Stack.Screen
-                  name="CollectionCreate"
-                  component={CollectionEditScreen}
-                />
-                <Stack.Screen
-                  name="CollectionChangelog"
-                  component={CollectionChangelogScreen}
-                  options={{
-                    title: "Manage Notebook",
-                  }}
-                />
-                <Stack.Screen
-                  name="CollectionMembers"
-                  component={CollectionMembersScreen}
-                  options={{
-                    title: "Collection Members",
-                  }}
-                />
-                <Stack.Screen
-                  name="NoteEdit"
-                  component={NoteEditScreen}
-                />
-                <Stack.Screen
-                  name="Invitations"
-                  component={InvitationsScreen}
-                  options={{
-                    title: "Collection Invitations",
-                  }}
-                />
-                <Stack.Screen
-                  name="Password"
-                  component={ChangePasswordScreen}
-                  options={{
-                    title: "Change Your Account Password",
-                  }}
-                />
-              </>
-            )}
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-            <Stack.Screen name="About" component={AboutScreen} />
-            <Stack.Screen
-              name="DebugLogs"
-              component={DebugLogsScreen}
-              options={{
-                title: "View Debug Logs",
-              }}
-            />
-            {/* We keep this outside of the guarded routes so we can navigate to it from the login/signup screens */}
-            <Stack.Screen
-              name="AccountWizard"
-              component={AccountWizardScreen}
-              options={{
-                title: C.appName,
-              }}
-            />
-            <Stack.Screen
-              name="404"
-              component={NotFoundScreen}
-              options={{
-                title: "Page Not Found",
-                headerLeft: () => (
-                  <MenuButton />
-                ),
-              }}
-            />
-          </Stack.Navigator>
-        </View>
-        <GlobalMessages />
+          />
+          {/* We keep this outside of the guarded routes so we can navigate to it from the login/signup screens */}
+          <Stack.Screen
+            name="AccountWizard"
+            component={AccountWizardScreen}
+            options={{
+              title: C.appName,
+            }}
+          />
+          <Stack.Screen
+            name="404"
+            component={NotFoundScreen}
+            options={{
+              title: "Page Not Found",
+              headerLeft: () => (
+                <MenuButton />
+              ),
+            }}
+          />
+        </Stack.Navigator>
       </View>
-    </SearchProvider>
+      <GlobalMessages />
+    </View>
   );
 });
 
@@ -259,8 +249,7 @@ function GlobalMessages() {
       visible={!!message}
       duration={5000}
       onDismiss={handleClose}
-      // Over the columns of wide screens (and not under them), with colors that read in both themes
-      wrapperStyle={{ zIndex: 10 }}
+      // With colors that read in both themes
       style={{ backgroundColor: theme.colors.chipActive }}
       action={{
         label: "Dismiss",

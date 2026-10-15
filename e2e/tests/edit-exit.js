@@ -1,5 +1,5 @@
-// Wide screens: editing ends with escape, or with a click around the note (not in it). And the
-// message after moving a note to another notebook can be read, over the columns.
+// On the web, editing ends with escape, or with a click around the note (not in it). And the
+// message after moving a note to another notebook can be read.
 const { launch, session, run, check, api, unique } = require("../lib");
 run(async () => {
   const n = unique();
@@ -8,7 +8,7 @@ run(async () => {
   await api.addNote(other, "Placeholder " + n, "so that the notebook is there");
   const b = await launch();
   for (const scheme of ["light", "dark"]) {
-    const A = await session(b, scheme, { width: 1280, height: 800 });
+    const A = await session(b, scheme);
     await A.p.emulateMedia({ colorScheme: scheme });
     await A.login();
     const inEditor = async () => (await A.p.locator('textarea[aria-label="Content"] >> visible=true').count()) > 0;
@@ -23,9 +23,9 @@ run(async () => {
     await edit();
     await A.p.locator('textarea[aria-label="Content"] >> visible=true').click(); await A.wait(800);
     check(`${scheme}: a click in the note keeps editing`, await inEditor());
-    // Around the sheet: just left of it
+    // Around the sheet: in the margin left of it
     const sheet = await A.p.locator('textarea[aria-label="Content"] >> visible=true').boundingBox();
-    await A.p.mouse.click(sheet.x - 45, sheet.y + 100); await A.wait(1000);
+    await A.p.mouse.click(4, sheet.y + 100); await A.wait(1000);
     check(`${scheme}: a click around the note ends editing`, !(await inEditor()));
 
     // Moving it to another notebook says so, readably
@@ -46,7 +46,7 @@ run(async () => {
       return { text: el.textContent, onTop: el === top || el.contains(top), color: getComputedStyle(el).color, bg };
     });
     check(`${scheme}: moving the note shows a message`, !!message && message.text.startsWith("Moved to"), message);
-    check(`${scheme}: which isn't covered by the columns`, !!message && message.onTop, message);
+    check(`${scheme}: which isn't covered`, !!message && message.onTop, message);
     check(`${scheme}: and can be read`, !!message && message.color !== message.bg, message);
     await A.ctx.close();
   }
