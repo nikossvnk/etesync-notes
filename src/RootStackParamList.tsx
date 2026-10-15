@@ -28,6 +28,11 @@ export type RootStackParamList = {
     colUid: string;
     itemUid: string;
   };
+  Bookmarks: undefined;
+  BookmarkCreate: { url?: string, title?: string } | undefined;
+  BookmarkEdit: { colUid: string, itemUid: string };
+  // Saving a link that was shared with the app
+  BookmarkShare: { url?: string, title?: string, text?: string } | undefined;
   Invitations: undefined;
   Settings: undefined;
   Password: undefined;

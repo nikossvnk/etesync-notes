@@ -25,6 +25,9 @@ import CollectionMembersScreen from "./screens/CollectionMembersScreen";
 import InvitationsScreen from "./screens/InvitationsScreen";
 import AccountWizardScreen from "./screens/AccountWizardScreen";
 import NotFoundScreen from "./screens/NotFoundScreen";
+import BookmarkListScreen from "./screens/BookmarkListScreen";
+import BookmarkEditScreen from "./screens/BookmarkEditScreen";
+import { BookmarkShareRoute } from "./screens/BookmarkShareScreen";
 
 import { useCredentials } from "./credentials";
 import { performSync, popMessage } from "./store/actions";
@@ -119,6 +122,8 @@ export default React.memo(function RootNavigator() {
                 component={HomeScreen}
                 options={{
                   title: C.appName,
+                  // (switched to from the bookmarks with the tabs at the top)
+                  animation: "none",
                   headerLeft: () => (
                     <MenuButton />
                   ),
@@ -182,6 +187,33 @@ export default React.memo(function RootNavigator() {
               <Stack.Screen
                 name="NoteEdit"
                 component={NoteEditScreen}
+              />
+              <Stack.Screen
+                name="Bookmarks"
+                component={BookmarkListScreen}
+                options={{
+                  title: "Bookmarks",
+                  // It's switched to with the tabs at the top, which isn't going to another screen
+                  animation: "none",
+                  headerLeft: () => (
+                    <MenuButton />
+                  ),
+                }}
+              />
+              <Stack.Screen
+                name="BookmarkCreate"
+                component={BookmarkEditScreen}
+              />
+              <Stack.Screen
+                name="BookmarkEdit"
+                component={BookmarkEditScreen}
+              />
+              <Stack.Screen
+                name="BookmarkShare"
+                component={BookmarkShareRoute}
+                options={{
+                  title: "Save bookmark",
+                }}
               />
               <Stack.Screen
                 name="Invitations"

@@ -26,6 +26,23 @@
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
+      <!-- The app's own links (com.etesync.notes://bookmarks), e.g. from the share sheet and the shortcut.
+           Not BROWSABLE, so web pages can't open them. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:scheme="com.etesync.notes"/>
+      </intent-filter>
+      <!-- The "Bookmarks" target in the top row of the share menu (direct share), see MainApplication -->
+      <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts"/>
+    </activity>
+    <!-- Saving a link shared from another app as a bookmark: a sheet over that app, in its task -->
+    <activity android:name=".ShareActivity" android:label="@string/share_label" android:theme="@style/Theme.App.Share" android:exported="true" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:autoRemoveFromRecents="true" android:windowSoftInputMode="adjustResize|stateVisible" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|smallestScreenSize">
+      <intent-filter>
+        <action android:name="android.intent.action.SEND"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:mimeType="text/plain"/>
+      </intent-filter>
     </activity>
   </application>
 </manifest>

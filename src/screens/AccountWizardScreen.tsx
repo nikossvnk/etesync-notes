@@ -13,6 +13,7 @@ import Wizard, { WizardNavigationBar, PagePropsType } from "../widgets/Wizard";
 import { SyncManager } from "../sync/SyncManager";
 
 import { store } from "../store";
+import { notebooksSelector } from "../store/selectors";
 import { useCredentials } from "../credentials";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -108,9 +109,8 @@ export default function AccountWizardScreen() {
       try {
         await sync;
 
-        const cachedCollection = (store.getState() as any).cache.collections;
         // XXX new account - though should change test to see if there are any PIM types
-        if (cachedCollection.size > 0) {
+        if (notebooksSelector(store.getState() as any).size > 0) {
           setRanWizard(true);
         }
       } catch (e) {

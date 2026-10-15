@@ -8,6 +8,7 @@ import * as Etebase from "etebase";
 
 import { useSyncGate, usePendingCount } from "../SyncGate";
 import { StoreState } from "../store";
+import { notebooksSelector, notesSelector } from "../store/selectors";
 import { SyncManager } from "../sync/SyncManager";
 import { performSync } from "../store/actions";
 import { useCredentials } from "../credentials";
@@ -33,8 +34,8 @@ type Notebook = {
 };
 
 export default function NotebookListScreen(props: PropsType) {
-  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
-  const cacheItems = useSelector((state: StoreState) => state.cache.items);
+  const cacheCollections = useSelector(notebooksSelector);
+  const cacheItems = useSelector(notesSelector);
   const notebooks: Notebook[] = React.useMemo(() => Array.from(cacheCollections
     .sort((a, b) => (a.meta!.name!.toUpperCase() >= b.meta!.name!.toUpperCase()) ? 1 : -1)
     .map(({ meta }, uid) => {return { meta, uid }})

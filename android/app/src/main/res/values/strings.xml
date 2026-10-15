@@ -1,3 +1,5 @@
 <resources>
   <string name="app_name">EteSync Notes</string>
+  <string name="share_label">Save to EteSync</string>
+  <string name="shortcut_bookmarks">Bookmarks</string>
 </resources>

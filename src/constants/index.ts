@@ -19,3 +19,7 @@ export const genericMode = Platform.OS === "ios";
 
 
 export const colType = "etebase.md.note";
+// Bookmarks: the title is the item's name, the link and the rest are in its meta (see bookmarks.ts)
+export const bookmarkColType = "etebase.bookmark";
+// All of the types that are synced
+export const collectionTypes = [colType, bookmarkColType];

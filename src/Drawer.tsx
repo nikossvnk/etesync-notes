@@ -155,6 +155,15 @@ export default function Drawer(props: PropsType) {
               }}
               icon="notebook-multiple"
             />
+            <DrawerItem
+              label="Bookmarks"
+              to="/bookmarks"
+              onPress={() => {
+                navigation.closeDrawer();
+                (navigation as any).navigate("Root", { screen: "Bookmarks", pop: true });
+              }}
+              icon="bookmark-multiple"
+            />
             <Divider />
           </>
         )}

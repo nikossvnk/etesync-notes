@@ -45,6 +45,10 @@ const rootStackScreens: RootStackScreens = {
   NoteEdit: "notebook/:colUid/note/:itemUid",
   NoteProps: "notebook/:colUid/note/:itemUid/properties",
   NoteMove: "notebook/:colUid/note/:itemUid/move",
+  Bookmarks: "bookmarks",
+  BookmarkCreate: "new-bookmark",
+  BookmarkEdit: "bookmark/:colUid/:itemUid",
+  BookmarkShare: "share",
   Invitations: "invitations",
   Settings: "settings",
   About: "settings/about",
@@ -66,18 +70,24 @@ const linking = {
   },
 };
 
-function InnerApp() {
-  // XXX Workaround for react-navigation #7561 (flashing drawer)
-  const [initRender, setInitRender] = React.useState(true);
-  React.useEffect(() => setInitRender(false), []);
+// The theme (light or dark, as chosen in the settings or by the system), and whether the font is ready
+export function useAppTheme() {
   const colorScheme_ = useColorScheme();
   const darkModePreference = useSelector((state: StoreState) => state.settings.theme);
   const colorScheme = (darkModePreference === "auto") ? colorScheme_ : darkModePreference;
   const theme = (colorScheme === "dark") ? DarkTheme : LightTheme;
   // The font of the app, which is part of it, so this is quick (and it falls back to the system's if it fails)
   const [fontsLoaded, fontsError] = useFonts({ IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexSans_700Bold });
+  return { theme, ready: fontsLoaded || !!fontsError };
+}
 
-  if (!fontsLoaded && !fontsError) {
+function InnerApp() {
+  // XXX Workaround for react-navigation #7561 (flashing drawer)
+  const [initRender, setInitRender] = React.useState(true);
+  React.useEffect(() => setInitRender(false), []);
+  const { theme, ready } = useAppTheme();
+
+  if (!ready) {
     return null;
   }
 

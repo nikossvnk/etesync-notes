@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 
 import { useCredentials } from "./credentials";
 import { untitled } from "./notes";
-import { StoreState } from "./store";
+import { notebooksSelector, notesSelector } from "./store/selectors";
 
 type NoteData = { name: string, content: string, id: string };
 
@@ -26,8 +26,8 @@ const msOptions: Options = {
 // Searches the titles and contents of all of the notes. The results have the note as id
 // ("colUid:itemUid"), and its name and content.
 export function useNoteSearch(query: string, enabled = true) {
-  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
-  const cacheItems = useSelector((state: StoreState) => state.cache.items);
+  const cacheCollections = useSelector(notebooksSelector);
+  const cacheItems = useSelector(notesSelector);
   const etebase = useCredentials();
   const minisearch = React.useMemo(() => new MiniSearch<NoteData>(msOptions), []);
   // Changes when the notes were indexed again, so that the results follow

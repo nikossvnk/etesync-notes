@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shares of text (links) can go straight to the "Bookmarks" shortcut (in the top row of the share menu),
+     which MainApplication publishes with this category -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <share-target android:targetClass="com.etesync.notes.ShareActivity">
+    <data android:mimeType="text/plain"/>
+    <category android:name="com.etesync.notes.category.BOOKMARKS"/>
+  </share-target>
+</shortcuts>

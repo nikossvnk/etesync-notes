@@ -36,6 +36,8 @@ export type CachedCollectionsData = ImmutableMap<string, CachedCollection>;
 export type SyncGeneralData = {
   stoken?: string | null;
   lastSyncDate?: Date;
+  // The collection types the stoken is for (the notes only if unset)
+  types?: string[];
 };
 
 export type Message = {
@@ -145,11 +147,12 @@ export const syncItems = handleActions(
 
 export const syncGeneral = handleActions(
   {
-    [actions.setSyncGeneral.toString()]: (state: SyncGeneralData, action: Action<string | null | undefined>) => {
+    [actions.setSyncGeneral.toString()]: (state: SyncGeneralData, action: ActionMeta<string | null | undefined, { types: string[] }>) => {
       if (action.payload !== undefined) {
         return {
           stoken: action.payload,
           lastSyncDate: new Date(),
+          types: action.meta?.types,
         };
       }
       return state;

@@ -15,6 +15,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { useSyncGate } from "../SyncGate";
 import { goUp } from "../navigation";
 import { StoreState, store, useAsyncDispatch } from "../store";
+import { notebooksSelector } from "../store/selectors";
 import ScrollView from "../widgets/ScrollView";
 import RawTextInput from "../widgets/RawTextInput";
 import { useCredentials } from "../credentials";
@@ -589,7 +590,7 @@ function NotebookPicker(props: NotebookPickerPropsType) {
   const theme = useTheme();
   const { colUid, editable, onChange } = props;
   const [open, setOpen] = React.useState(false);
-  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
+  const cacheCollections = useSelector(notebooksSelector);
   const notebooks = Array.from(cacheCollections.entries())
     .map(([uid, col]) => ({ uid, name: col.meta.name ?? "", color: col.meta.color || defaultColor }))
     .sort((a, b) => a.name.localeCompare(b.name));

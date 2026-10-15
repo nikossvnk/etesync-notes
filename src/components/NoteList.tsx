@@ -8,7 +8,8 @@ import * as Etebase from "etebase";
 
 import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
-import { CachedItem, StoreState } from "../store";
+import { CachedItem } from "../store";
+import { notebooksSelector, notesSelector } from "../store/selectors";
 import { defaultColor } from "../helpers";
 import { untitled } from "../notes";
 
@@ -194,8 +195,8 @@ interface PropsType {
 }
 
 export default function NoteList(props: PropsType) {
-  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
-  const cacheItems = useSelector((state: StoreState) => state.cache.items);
+  const cacheCollections = useSelector(notebooksSelector);
+  const cacheItems = useSelector(notesSelector);
   const syncGate = useSyncGate();
   const theme = useTheme();
   const etebase = useCredentials();

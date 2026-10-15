@@ -10,12 +10,14 @@ import { useSelector, useDispatch } from "react-redux";
 
 import { useSyncGate, usePendingCount } from "../SyncGate";
 import { StoreState } from "../store";
+import { notesSelector } from "../store/selectors";
 import { SyncManager } from "../sync/SyncManager";
 import { performSync, setSettings } from "../store/actions";
 import { useCredentials } from "../credentials";
 
 import NoteList from "../components/NoteList";
 import NotebookFilter from "../components/NotebookFilter";
+import SectionTabs from "../widgets/SectionTabs";
 import Appbar from "../widgets/Appbar";
 import AppbarButton from "../widgets/AppbarButton";
 import { DefaultNavigationProp } from "../RootStackParamList";
@@ -43,7 +45,7 @@ export default function NoteListScreen(props: PropsType) {
   const notebookName = useSelector((state: StoreState) => (filterBy) ? state.cache.collections.get(filterBy)?.meta.name : undefined);
   const count = useSelector((state: StoreState) => {
     let ret = 0;
-    for (const [colUid, items] of state.cache.items.entries()) {
+    for (const [colUid, items] of notesSelector(state).entries()) {
       if (!filterBy || (colUid === filterBy)) {
         ret += items.count((x) => !x.isDeleted);
       }
@@ -148,6 +150,7 @@ export default function NoteListScreen(props: PropsType) {
   return (
     <>
       <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+        <SectionTabs current="notes" />
         <Text style={[styles.bigTitle, { color: theme.colors.text }]} accessibilityRole="header" numberOfLines={1}>{title}</Text>
         <TouchableRipple
           borderless

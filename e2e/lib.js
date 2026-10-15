@@ -43,13 +43,13 @@ exports.api = {
   async login() {
     return Etebase.Account.login(config.username, config.password, config.serverUrl);
   },
-  // Deletes all of the notebooks (and so their notes) and makes an empty "My Notes", so that the
+  // Deletes all of the notebooks and bookmark collections (and so their items) and makes an empty "My Notes", so that the
   // notes of earlier runs don't fill the lists. Only for the test account!
   async reset() {
     const etebase = await this.login();
     const colMgr = etebase.getCollectionManager();
     let deleted = 0;
-    for (const col of await this.notebooks(etebase)) {
+    for (const col of [...await this.notebooks(etebase), ...await this.notebooks(etebase, "etebase.bookmark")]) {
       if (!col.isDeleted) {
         col.delete();
         await colMgr.upload(col);
@@ -61,12 +61,12 @@ exports.api = {
     return deleted;
   },
   // All of the notebooks, which come in pages (the test account gets more of them with every run)
-  async notebooks(etebase) {
+  async notebooks(etebase, type = "etebase.md.note") {
     const colMgr = etebase.getCollectionManager();
     const ret = [];
     let stoken;
     for (;;) {
-      const page = await colMgr.list("etebase.md.note", { stoken, limit: 50 });
+      const page = await colMgr.list(type, { stoken, limit: 50 });
       ret.push(...page.data);
       stoken = page.stoken;
       if (page.done) {
@@ -125,6 +125,25 @@ exports.api = {
     const item = await itemMgr.create({ name, mtime: Date.now() }, content);
     await itemMgr.batch([item]);
     await etebase.logout();
+  },
+  // All of the bookmarks on the server, deleted ones too, as { collection, name, url, note, tags, deleted, content }
+  async bookmarks() {
+    const etebase = await this.login();
+    const ret = [];
+    for (const col of await this.notebooks(etebase, "etebase.bookmark")) {
+      if (col.isDeleted) {
+        continue;
+      }
+      for (const item of await this.items(etebase, col)) {
+        const meta = item.getMeta();
+        ret.push({
+          collection: col.getMeta().name, name: meta.name, url: meta.url, note: meta.description, tags: meta.tags,
+          deleted: item.isDeleted, content: (item.isDeleted) ? undefined : await item.getContent(Etebase.OutputFormat.String),
+        });
+      }
+    }
+    await etebase.logout();
+    return ret;
   },
   // The names of all of the notes on the server ("DELETED:" in front of deleted ones)
   async noteNames() {

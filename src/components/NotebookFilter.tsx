@@ -6,7 +6,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Text, TouchableRipple } from "react-native-paper";
 import { useSelector } from "react-redux";
 
-import { StoreState } from "../store";
+import { notebooksSelector } from "../store/selectors";
 import { defaultColor } from "../helpers";
 import { fonts, useTheme } from "../theme";
 
@@ -52,7 +52,7 @@ interface PropsType {
 // A row of chips to choose which notebook's notes to show
 export default function NotebookFilter(props: PropsType) {
   const theme = useTheme();
-  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
+  const cacheCollections = useSelector(notebooksSelector);
   const notebooks = React.useMemo(() => Array.from(cacheCollections
     .sort((a, b) => (a.meta!.name!.toUpperCase() >= b.meta!.name!.toUpperCase()) ? 1 : -1)
     .map(({ meta }, uid) => ({ meta, uid }))

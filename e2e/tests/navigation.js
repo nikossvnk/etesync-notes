@@ -27,7 +27,9 @@ run(async () => {
   };
 
   await at("home has the menu button, no back button", "/", false);
-  check("there's no bar of tabs at the bottom", await A.p.getByRole("tab").locator("visible=true").count() === 0);
+  // (the tabs of the notes and the bookmarks are at the top)
+  const tabsAt = await A.p.getByRole("tab").locator("visible=true").evaluateAll((tabs) => tabs.map((x) => x.getBoundingClientRect().top));
+  check("there's no bar of tabs at the bottom", tabsAt.every((y) => y < 300), tabsAt);
 
   // The search is opened from the field above the notes, and finds notes by their content
   await A.tab("Search"); await at("the search field opens the search", "/search", true);

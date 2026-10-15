@@ -10,6 +10,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
+import { notebooksSelector } from "../store/selectors";
 import { setCacheItem } from "../store/actions";
 import { newNotes, openInEditor } from "../newNotes";
 import { NoteMetadata } from "../helpers";
@@ -28,7 +29,7 @@ interface PropsType {
 // Creates a note and opens it, where its title, notebook and content are written. It's in the given
 // notebook, or the one the notes are filtered by, or else the first one.
 export default function NoteCreateScreen(props: PropsType) {
-  const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
+  const cacheCollections = useSelector(notebooksSelector);
   const filterBy = useSelector((state: StoreState) => state.settings.viewSettings.filterBy);
   const syncGate = useSyncGate();
   const navigation = useNavigation<NavigationProp>();
