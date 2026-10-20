@@ -1,6 +1,12 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.0.2
+* A much smaller app (about 33 MB instead of 58 MB): there are now two APKs, one for 64-bit phones (nearly all of them) and one ending in -armeabi-v7a for older 32-bit phones; and unused fonts and libraries are left out
+* "Download Updates" is gone from the settings, as there's no server for it
+* The background sync, which never ran, is gone: notes are synced while the app is open
+* The list of open source licenses in About is up to date
+
 ## Version 2.0.1
 * The button to save a bookmark stays above the keyboard while typing
 
