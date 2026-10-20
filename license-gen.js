@@ -1,4 +1,4 @@
-// Running: node license-gen.js > licenses.json
+// Running: node license-gen.js > licenses.json (after "npm install --no-save license-checker")
 
 const checker = require('license-checker');
 

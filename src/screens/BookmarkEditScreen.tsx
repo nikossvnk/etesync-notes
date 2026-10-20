@@ -4,7 +4,7 @@
 import * as React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Text, TouchableRipple } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { RouteProp, useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import * as Clipboard from "expo-clipboard";

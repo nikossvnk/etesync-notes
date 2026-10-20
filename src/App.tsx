@@ -20,7 +20,12 @@ import { useSelector } from "react-redux";
 import { StoreState } from "./store";
 import { RootStackParamList } from "./RootStackParamList";
 import { DarkTheme, LightTheme } from "./theme";
-import { useFonts, IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexSans_700Bold } from "@expo-google-fonts/ibm-plex-sans";
+import { useFonts } from "expo-font";
+// (each weight on its own: the package's index would bring all 14 of them into the app)
+import { IBMPlexSans_400Regular } from "@expo-google-fonts/ibm-plex-sans/400Regular";
+import { IBMPlexSans_500Medium } from "@expo-google-fonts/ibm-plex-sans/500Medium";
+import { IBMPlexSans_600SemiBold } from "@expo-google-fonts/ibm-plex-sans/600SemiBold";
+import { IBMPlexSans_700Bold } from "@expo-google-fonts/ibm-plex-sans/700Bold";
 
 enableScreens();
 

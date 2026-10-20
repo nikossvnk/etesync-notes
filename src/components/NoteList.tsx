@@ -2,7 +2,7 @@ import * as React from "react";
 import { differenceInCalendarDays, format, isThisYear, isToday, isYesterday } from "date-fns";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSelector } from "react-redux";
 import * as Etebase from "etebase";
 

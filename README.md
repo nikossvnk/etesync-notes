@@ -1,76 +1,42 @@
 <p align="center">
   <img width="120" src="assets/icon.png" />
-  <h1 align="center">EteSync - Encrypt Everything</h1>
+  <h1 align="center">EteSync Notes</h1>
 </p>
 
 > [!NOTE]
 > **This is an independent fork** of [EteSync Notes](https://github.com/etesync/etesync-notes), the original
 > project of the EteSync authors. This fork is not affiliated with, endorsed by or supported by EteSync or
 > [etesync.com](https://www.etesync.com) in any way. The history of the original project is kept as it is,
-> with its authors, and the changes of this fork follow it. The app store badges and links below are of the
-> original app; the builds of this fork are on its [releases page](https://github.com/nikossvnk/etesync-notes/releases).
-> Like the original, it's licensed under the GPL-3.0.
+> with its authors, and the changes of this fork follow it. Like the original, it's licensed under the
+> [GPL-3.0](LICENSES/GPL-3.0-only).
 
-Secure, end-to-end encrypted, and privacy-respecting notes application.
+Secure, end-to-end encrypted, and privacy-respecting notes and bookmarks for Android, synced with an
+[Etebase](https://www.etebase.com) server (your own, or EteSync's).
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-     alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.etesync.notes/)
-[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
-     alt="Get it on Google Play"
-     height="80">](https://play.google.com/store/apps/details?id=com.etesync.notes)
-[<img src="https://www.etesync.com/static/img/app-store-badge.c31e7b1c6a83.png"
-     alt="Download on the App Store"
-     height="80">](https://apps.apple.com/us/app/etesync-notes/id1533806351)
+- Notes in Markdown, in notebooks, which can be searched, exported to a zip and imported from one
+- Bookmarks, saved from the share menu of other apps
+- Works offline, and syncs while the app is open
 
-![GitHub tag](https://img.shields.io/github/tag/etesync/etesync-notes.svg)
-[![Chat with us](https://img.shields.io/badge/chat-IRC%20|%20Matrix%20|%20Web-blue.svg)](https://www.etebase.com/community-chat/)
+## Download
 
-# Overview
+The APKs are on the [releases page](https://github.com/nikossvnk/etesync-notes/releases):
+`etesync-notes-X.Y.Z.apk` for 64-bit phones (nearly all of them), and
+`etesync-notes-X.Y.Z-armeabi-v7a.apk` for older 32-bit phones. Each has a `.sha256` next to it.
 
-Please see the [EteSync website](https://www.etesync.com) for more information.
+## Building
 
-EteSync is licensed under the [GPLv3 License](LICENSE).
+It's an [Expo](https://expo.dev) (React Native) app. With Node.js 24, JDK 17 and the Android SDK
+(`ANDROID_HOME` set):
 
-The App is a react native app that uses the react-native-web library to run in the browser.
+```
+npm install
+npx tsc --noEmit && npm run lint    # the checks CI runs
+npm run android                     # build, install and start it on a device or emulator
+```
 
-# Usage
+A release APK: `cd android && ./gradlew assembleRelease`. It's signed with the debug key unless the
+release key is given (see `android/app/build.gradle`), and such builds are for testing only. Releases
+are built by the release workflow when a `vX.Y.Z` tag is pushed.
 
-A live instance is available on https://notes.etesync.com/
-
-# Support Developing the App
-
-Find more information about setting up the development environments here https://reactnative.dev/docs/environment-setup.
-
-## Prerequisites
-
-Before you can build the App from source, you need to make sure you have `yarn` and `node` installed.
-
-- Clone this repository `git clone https://github.com/mrichtsfeld/etesync-notes.git`
-- Enter the newly created folder `cd etesync-notes`
-- Run `yarn` and wait until all of the deps are installed
-
-## Run the Web App
-
-- Install expo `npm install -g expo-cli`
-- Run `yarn web`
-
-## Run the iOS App (OS X only)
-
-Make sure XCode and developer tools are installed.
-
-- Install cocoapods `brew install cocoapods`
-- Enter the root directory of the project and then the iOS directory `cd ios`
-- Run `pod install` and wait for it to complete
-- exit the iOS directory `cd ..`
-- Run `yarn start` in one shell
-- And run `yarn ios` in another shell (this will start the simulator)
-
-## Run the Android App
-
-- Install all tools for your environment https://reactnative.dev/docs/environment-setup
-- Start your virtual device by opening Android studio and in the bottom right corner click "Configure" and select "AVD Manager"
-- If no device for the required build environment is available, create a new one
-- Run `yarn start` in one shell
-- And run `yarn android` in another shell (this will connect the emulator) - the first build may take some time
-- If you run into this issue `Task :app:validateSigningDebug FAILED` download the [debug.keystore](https://raw.githubusercontent.com/facebook/react-native/master/template/android/app/debug.keystore) and copy it into your `android/app` folder
+The app also builds for the web (`npx expo export --platform web`), which is only used by the
+browser tests in [`e2e`](e2e/README.md).

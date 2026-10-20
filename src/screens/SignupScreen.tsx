@@ -40,7 +40,7 @@ interface FormErrors {
 
 type NavigationProp = StackNavigationProp<RootStackParamList, "Signup">;
 
-// Can be used to force always showing advance, e.g. for genericMode
+// Can be used to force always showing advance
 const alwaysShowAdvanced = false;
 
 export default React.memo(function SignupScreen() {

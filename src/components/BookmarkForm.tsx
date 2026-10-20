@@ -4,7 +4,7 @@
 import * as React from "react";
 import { Platform, StyleSheet, TextInput, TextInputProps, View } from "react-native";
 import { Text, TouchableRipple } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { format } from "date-fns";
 
 import { Bookmark, normalizeTag } from "../bookmarks";

@@ -9,16 +9,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#424242"
     },
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.etesync.notes"
-    },
     "web": {
       "favicon": "./assets/favicon.png",
       "themeColor": "#ffc107"
@@ -31,7 +24,6 @@
       }
     },
     "platforms": [
-      "ios",
       "android",
       "web"
     ],

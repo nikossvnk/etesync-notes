@@ -140,6 +140,16 @@ android {
             useLegacyPackaging enableLegacyPackaging.toBoolean()
         }
     }
+    // With -PsplitApksPerAbi=true (the release workflow does), one APK per CPU architecture of
+    // reactNativeArchitectures instead of one with all of them, each about half the size
+    splits {
+        abi {
+            enable((findProperty('splitApksPerAbi') ?: 'false').toBoolean())
+            reset()
+            include(*findProperty('reactNativeArchitectures').toString().split(',').collect { it.trim() })
+            universalApk false
+        }
+    }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }

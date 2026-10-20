@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { AppState, AppStateStatus, Platform, useWindowDimensions } from "react-native";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import * as Etebase from "etebase";
 
 import { logger } from "./logging";
@@ -24,10 +24,6 @@ export function* arrayToChunkIterator<T>(arr: T[], size: number) {
 
 export function isPromise(x: any): x is Promise<any> {
   return x && typeof x.then === "function";
-}
-
-export function isDefined<T>(x: T | undefined): x is T {
-  return x !== undefined;
 }
 
 export function startTask<T = any>(func: () => Promise<T> | T, delay = 0): Promise<T> {
@@ -194,23 +190,6 @@ export const fontFamilies = Platform.select({
     serif: "serif",
   },
 });
-
-// These are taken from https://material.io/design/layout/responsive-layout-grid.html#breakpoints
-const deviceBreakpoints = {
-  tabletPortrait: 600,
-  tabletLandscape: 960,
-};
-
-export function useDeviceBreakpoint(device: keyof typeof deviceBreakpoints) {
-  const { width } = useWindowDimensions();
-  const [breakpoint, setBreakpoint] = React.useState(false);
-
-  React.useEffect(() => {
-    (width < deviceBreakpoints[device]) ? setBreakpoint(false) : setBreakpoint(true);
-  }, [width, device]);
-
-  return breakpoint;
-}
 
 // How a server is named in the app: by its address, without https:// (but with http://, which isn't encrypted)
 export function serverName(serverUrl: string) {

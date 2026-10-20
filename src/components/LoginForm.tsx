@@ -22,7 +22,7 @@ interface FormErrors {
   server?: string;
 }
 
-// Can be used to force always showing advance, e.g. for genericMode
+// Can be used to force always showing advance
 const alwaysShowAdvanced = false;
 
 interface PropsType {
@@ -109,13 +109,9 @@ export default function LoginForm(props: PropsType) {
         >
           {errors.password}
         </HelperText>
-        {!C.genericMode && (
-          <>
-            <LinkButton to={C.forgotPassword} external>
-              Forget password?
-            </LinkButton>
-          </>
-        )}
+        <LinkButton to={C.forgotPassword} external>
+          Forget password?
+        </LinkButton>
 
         <TouchableRipple
           onPress={() => setShowAdvanced(!showAdvanced)}

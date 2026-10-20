@@ -5,7 +5,6 @@ import * as React from "react";
 import { Linking } from "react-native";
 import { List, Switch } from "react-native-paper";
 import { useDispatch, useSelector } from "react-redux";
-import * as Updates from "expo-updates";
 import { format } from "date-fns";
 
 import { LogLevel } from "../logging";
@@ -18,7 +17,6 @@ import { StoreState, store } from "../store";
 import { setSettings, pushMessage } from "../store/actions";
 import { ViewModeKey } from "../store/reducers";
 
-import * as C from "../constants";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import AnchorButton from "../widgets/AnchorButton";
@@ -307,20 +305,18 @@ const SettingsScreen = function _SettingsScreen() {
         {loggedIn && (
           <List.Section>
             <List.Subheader>Account</List.Subheader>
-            {!C.genericMode &&
-              <List.Item
-                title="Account Dashboard"
-                description="Change your payment info, plan and other account settings"
-                onPress={async () => {
-                  try {
-                    const url = await etebase!.getDashboardUrl();
-                    Linking.openURL(url);
-                  } catch (e) {
-                    dispatch(pushMessage({ message: e.message, severity: "error" }) as any);
-                  }
-                }}
-              />
-            }
+            <List.Item
+              title="Account Dashboard"
+              description="Change your payment info, plan and other account settings"
+              onPress={async () => {
+                try {
+                  const url = await etebase!.getDashboardUrl();
+                  Linking.openURL(url);
+                } catch (e) {
+                  dispatch(pushMessage({ message: e.message, severity: "error" }) as any);
+                }
+              }}
+            />
             <List.Item
               title="Change Password"
               description="Change your account's password"
@@ -357,51 +353,31 @@ const SettingsScreen = function _SettingsScreen() {
           />
         </List.Section>
 
-        {!C.genericMode && (
-          <List.Section>
-            <List.Subheader>Debugging</List.Subheader>
-            <List.Item
-              title="Enable Logging"
-              description={(settings.logLevel === LogLevel.Off) ? "Click to enable debug logging" : "Click to disable debug logging"}
-              accessible={false}
-              right={(props) =>
-                <Switch
-                  {...props}
-                  color={theme.colors.primary}
-                  value={settings.logLevel !== LogLevel.Off}
-                  onValueChange={(value) => {
-                    dispatch(setSettings({ logLevel: (value) ? LogLevel.Debug : LogLevel.Off }) as any);
-                  }}
-                />
-              }
-            />
-            <List.Item
-              title="View Logs"
-              description="View previously collected debug logs"
-              onPress={() => {
-                navigation.navigate("DebugLogs");
-              }}
-            />
-            <List.Item
-              title="Download Updates"
-              description="Download and run app updates"
-              onPress={async () => {
-                try {
-                  const check = await Updates.checkForUpdateAsync();
-                  if (check.isAvailable) {
-                    dispatch(pushMessage({ message: "Dowloading update", severity: "info" }) as any);
-                    await Updates.fetchUpdateAsync();
-                    await Updates.reloadAsync();
-                  } else {
-                    dispatch(pushMessage({ message: "Already on most recent version", severity: "info" }) as any);
-                  }
-                } catch (e) {
-                  dispatch(pushMessage({ message: `Error: ${e.message}`, severity: "error" }) as any);
-                }
-              }}
-            />
-          </List.Section>
-        )}
+        <List.Section>
+          <List.Subheader>Debugging</List.Subheader>
+          <List.Item
+            title="Enable Logging"
+            description={(settings.logLevel === LogLevel.Off) ? "Click to enable debug logging" : "Click to disable debug logging"}
+            accessible={false}
+            right={(props) =>
+              <Switch
+                {...props}
+                color={theme.colors.primary}
+                value={settings.logLevel !== LogLevel.Off}
+                onValueChange={(value) => {
+                  dispatch(setSettings({ logLevel: (value) ? LogLevel.Debug : LogLevel.Off }) as any);
+                }}
+              />
+            }
+          />
+          <List.Item
+            title="View Logs"
+            description="View previously collected debug logs"
+            onPress={() => {
+              navigation.navigate("DebugLogs");
+            }}
+          />
+        </List.Section>
       </ScrollView>
     </>
   );

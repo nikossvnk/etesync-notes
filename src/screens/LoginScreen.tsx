@@ -50,11 +50,9 @@ const LoginScreen = React.memo(function _LoginScreen() {
     <ScrollView keyboardAware>
       <Container>
         <Headline>Please Log In</Headline>
-        {!C.genericMode && (
-          <View style={{ alignItems: "center", flexDirection: "row" }}>
-            <Text> or </Text><LinkButton to="/signup">create an account</LinkButton>
-          </View>
-        )}
+        <View style={{ alignItems: "center", flexDirection: "row" }}>
+          <Text> or </Text><LinkButton to="/signup">create an account</LinkButton>
+        </View>
         <LoginForm
           onSubmit={onFormSubmit}
         />

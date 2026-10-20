@@ -3,7 +3,7 @@
 
 import { StyleSheet, View } from "react-native";
 import { Text, TouchableRipple } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StackActions, useNavigation } from "@react-navigation/native";
 
 import { fonts, useTheme } from "../theme";

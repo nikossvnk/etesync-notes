@@ -1,4 +1,3 @@
-import { Platform } from "react-native";
 import { configureFonts, MD2DarkTheme as PaperDarkTheme, MD2LightTheme as PaperLightTheme, MD2Theme as PaperTheme, useTheme as usePaperTheme } from "react-native-paper";
 import Color from "color";
 
@@ -36,7 +35,7 @@ export interface Theme extends PaperTheme {
     // Lines around cards and fields, and between the rows of a list
     border: string;
     divider: string;
-    // The sidebar of wide screens, the fields (e.g. search) and the chosen chip
+    // The top of the menu and the background around a note, the fields (e.g. search) and the chosen chip
     sidebar: string;
     field: string;
     chipActive: string;
@@ -134,12 +133,6 @@ export const DarkTheme: Theme = {
     success: "#2F8F6B",
   },
 };
-
-// Shadows are a style of their own on web
-export const cardShadow = Platform.select({
-  web: { boxShadow: "0 1px 2px rgba(20,20,20,0.06)" },
-  default: { elevation: 1 },
-});
 
 export function useTheme() {
   return usePaperTheme() as Theme;

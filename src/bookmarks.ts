@@ -117,11 +117,6 @@ export function comparableUrl(url: string) {
     .replace(/^[^/?]+/, (host) => host.toLowerCase());
 }
 
-export function findBookmarkByUrl(state: any, url: string) {
-  const wanted = comparableUrl(url);
-  return allBookmarks(state).find((x) => comparableUrl(x.url) === wanted);
-}
-
 // A web link in a text, e.g. what's shared by an app, which is often the title and then the link
 export function findUrl(text: string) {
   const match = /\bhttps?:\/\/[^\s<>"]+/i.exec(text);

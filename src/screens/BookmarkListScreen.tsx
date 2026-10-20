@@ -4,7 +4,7 @@
 import * as React from "react";
 import { FlatList, Linking, Platform, Share, StyleSheet, TextInput, View } from "react-native";
 import { FAB, Snackbar, Text, TouchableRipple } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import * as Clipboard from "expo-clipboard";

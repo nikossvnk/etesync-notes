@@ -100,7 +100,8 @@ jobs:
             -PreleaseStoreFile="$RUNNER_TEMP/release.jks" \
             -PappVersionName="${TAG#v}" \
             -PappVersionCode="$versionCode" \
-            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
+            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a \
+            -PsplitApksPerAbi=true
 
       - name: Remove the release keystore
         if: always()
@@ -109,17 +110,25 @@ jobs:
       - name: Check that the app is not signed with the debug key
         run: |
           apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
-          "$apksigner" verify --print-certs android/app/build/outputs/apk/release/app-release.apk | tee certs.txt
-          if grep -q "CN=Android Debug" certs.txt; then
-            echo "::error::The app is signed with the debug key"
-            exit 1
-          fi
+          for abi in arm64-v8a armeabi-v7a; do
+            "$apksigner" verify --print-certs "android/app/build/outputs/apk/release/app-$abi-release.apk" | tee certs.txt
+            if grep -q "CN=Android Debug" certs.txt; then
+              echo "::error::The $abi app is signed with the debug key"
+              exit 1
+            fi
+          done
 
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # One APK per CPU architecture: the one without a suffix is for 64-bit phones (nearly all of
+          # them), the armeabi-v7a one for older 32-bit phones
+          out=android/app/build/outputs/apk/release
           apk="etesync-notes-${TAG#v}.apk"
-          cp android/app/build/outputs/apk/release/app-release.apk "$apk"
+          apk32="etesync-notes-${TAG#v}-armeabi-v7a.apk"
+          cp "$out/app-arm64-v8a-release.apk" "$apk"
+          cp "$out/app-armeabi-v7a-release.apk" "$apk32"
           sha256sum "$apk" > "$apk.sha256"
-          gh release create "$TAG" "$apk" "$apk.sha256" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+          sha256sum "$apk32" > "$apk32.sha256"
+          gh release create "$TAG" "$apk" "$apk.sha256" "$apk32" "$apk32.sha256" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes

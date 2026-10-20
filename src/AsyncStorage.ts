@@ -1,5 +1,4 @@
-import * as localforage from "localforage";
+// (the web version, AsyncStorage.web.ts, falls back to localforage, which the app doesn't need here)
 import AsyncStorage from "@react-native-async-storage/async-storage";
-(localforage as any).getAllKeys = localforage.keys;
 
-export default AsyncStorage ?? localforage;
+export default AsyncStorage;

@@ -12,3 +12,10 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
+
+# expo-modules-core names this class in its manifest (meta-data), and loads it by that name, so R8
+# doesn't see that it's used; without it the app stopped at startup (ClassNotFoundException)
+-keep class expo.modules.adapters.react.apploader.RNHeadlessAppLoader { *; }
+
+# Shrink only: keep the names, so that stack traces of errors in release builds can be read
+-dontobfuscate

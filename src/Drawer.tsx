@@ -5,7 +5,7 @@ import * as React from "react";
 import { useSelector } from "react-redux";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { Image, Linking, View, StatusBar, StyleSheet } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Divider, Drawer as PaperDrawer, Text, Paragraph } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -49,22 +49,20 @@ export const externalMenuItems = [
   },
 ];
 
-if (!C.genericMode) {
-  externalMenuItems.unshift(
-    {
-      title: "FAQ",
-      link: C.faq,
-      icon: "forum",
-    }
-  );
-  externalMenuItems.unshift(
-    {
-      title: "Web site",
-      link: C.homePage,
-      icon: "home",
-    }
-  );
-}
+externalMenuItems.unshift(
+  {
+    title: "FAQ",
+    link: C.faq,
+    icon: "forum",
+  }
+);
+externalMenuItems.unshift(
+  {
+    title: "Web site",
+    link: C.homePage,
+    icon: "home",
+  }
+);
 
 export function FingerprintDialog(props: { visible: boolean, onDismiss: () => void }) {
   const etebase = useCredentials()!;

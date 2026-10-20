@@ -5,8 +5,8 @@ import * as SecureStore from "expo-secure-store";
 import * as Etebase from "etebase";
 
 const storageKey = "sessionKey";
+// (Only used by the iOS Keychain; kept so that the key stays readable as it was saved)
 const options: SecureStore.SecureStoreOptions = {
-  // The background sync has to be able to read it while the device is locked
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
 };
 

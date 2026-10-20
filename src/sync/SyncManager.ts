@@ -3,16 +3,13 @@
 
 import * as Etebase from "etebase";
 
-import * as BackgroundFetch from "expo-background-fetch";
-import * as TaskManager from "expo-task-manager";
-
-import { store, persistor, StoreState, asyncDispatch } from "../store";
+import { store, StoreState, asyncDispatch } from "../store";
 
 import { credentialsSelector } from "../credentials";
 import { setSyncCollection, unsetSyncCollection, setSyncGeneral, setCacheCollection, unsetCacheCollection, setPendingCollection, unsetPendingCollection, setCacheItem, setCacheItemMulti, setSyncItem, unsetSyncItem, addError, performSync, pushMessage, setSyncStatus } from "../store/actions";
 import { CachedCollection, CachedItem } from "../store/reducers";
 import * as C from "../constants";
-import { startTask, arrayToChunkIterator } from "../helpers";
+import { arrayToChunkIterator } from "../helpers";
 
 const cachedSyncManager = new Map<string, SyncManager>();
 export class SyncManager {
@@ -472,63 +469,4 @@ export function deleteCollectionLocally(etebase: Etebase.Account, colMgr: Etebas
     store.dispatch(setPendingCollection(col.uid, { deletedCache: Etebase.toBase64(colMgr.cacheSave(col)) }));
   }
   requestSync(etebase, true);
-}
-
-function persistorLoaded() {
-  return new Promise((resolve, _reject) => {
-    const subscription = {} as { unsubscribe: () => void };
-    subscription.unsubscribe = persistor.subscribe(() => {
-      const { bootstrapped } = persistor.getState();
-      if (bootstrapped) {
-        resolve(true);
-        subscription.unsubscribe();
-      }
-    });
-    if (persistor.getState().bootstrapped) {
-      resolve(true);
-      subscription.unsubscribe();
-    }
-  });
-}
-
-const BACKGROUND_SYNC_TASK_NAME = "SYNCMANAGER_SYNC";
-
-TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
-  const timeout = startTask(() => true, 27 * 1000); // Background fetch is limited to 30 seconds.
-
-  try {
-    await persistorLoaded();
-    const beforeState = store.getState() as unknown as StoreState;
-    const etebase = await credentialsSelector(beforeState);
-
-    if (!etebase) {
-      return BackgroundFetch.BackgroundFetchResult.Failed;
-    }
-
-    const syncManager = SyncManager.getManager(etebase);
-    const sync = syncManager.sync();
-    Promise.race([timeout, sync]);
-    store.dispatch(performSync(sync));
-
-    const afterState = store.getState() as unknown as StoreState;
-    const receivedNewData =
-      (beforeState.cache.collections !== afterState.cache.collections) ||
-      (beforeState.cache.items !== afterState.cache.items);
-
-    return receivedNewData ? BackgroundFetch.BackgroundFetchResult.NewData : BackgroundFetch.BackgroundFetchResult.NoData;
-  } catch (error) {
-    return BackgroundFetch.BackgroundFetchResult.Failed;
-  }
-});
-
-export function registerSyncTask(_username: string) {
-  return BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK_NAME, {
-    minimumInterval: 4 * 60 * 60, // 4 hours
-    stopOnTerminate: false,
-    startOnBoot: true,
-  });
-}
-
-export function unregisterSyncTask(_username: string) {
-  return BackgroundFetch.unregisterTaskAsync(BACKGROUND_SYNC_TASK_NAME);
 }
