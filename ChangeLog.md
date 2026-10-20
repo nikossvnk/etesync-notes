@@ -1,6 +1,9 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.0.1
+* The button to save a bookmark stays above the keyboard while typing
+
 ## Version 2.0.0
 * Bookmarks: a tab next to the notes with saved links, which can be searched, filtered by tag, opened, edited and deleted (with undo). The title can be taken from the page
 * Links shared from other apps ("Save to EteSync" in the share menu, or the Bookmarks shortcut) are saved from a sheet over that app, and a link that's saved already is updated rather than added twice
