@@ -130,7 +130,9 @@ export default function AccountWizardScreen() {
 
   React.useEffect(() => {
     if (!syncError && !syncGate && ranWizard) {
-      navigation.navigate("Home");
+      // Replaces the wizard (and the login before it), so that back from the notes leaves the app
+      // instead of going back to the wizard, which only shows that it's loading once it's done
+      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
     }
   }, [ranWizard, syncError, syncGate]);
 
