@@ -23,6 +23,7 @@ import {
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
 import { SiteTile } from "./BookmarkListScreen";
 import ScrollView from "../widgets/ScrollView";
+import useKeyboardHeight from "../widgets/useKeyboardHeight";
 import NotFound from "../widgets/NotFound";
 import { fonts, useTheme } from "../theme";
 
@@ -57,6 +58,7 @@ export default function BookmarkEditScreen(props: PropsType) {
   const [clipboardUrl, setClipboardUrl] = React.useState<string>();
   const [fetching, setFetching] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const keyboard = useKeyboardHeight();
 
   // A new bookmark of a link that was saved already changes that one
   const existing = (!isEdit && (url.trim() !== "")) ? bookmarks.find((x) => comparableUrl(x.url) === comparableUrl(url)) : undefined;
@@ -153,7 +155,8 @@ export default function BookmarkEditScreen(props: PropsType) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    // (moved up by the keyboard, so that the save button stays above it)
+    <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingBottom: keyboard }}>
       <ScrollView keyboardAware keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
         {(clipboardUrl && (url.trim() === "")) && (
           <View style={[styles.clipboard, { backgroundColor: theme.colors.accentTint, borderColor: theme.colors.accentRing }]}>

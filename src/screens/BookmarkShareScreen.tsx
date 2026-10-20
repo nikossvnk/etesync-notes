@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp, StackActions, useNavigation } from "@react-navigation/native";
@@ -18,6 +18,7 @@ import {
 } from "../bookmarks";
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
 import { SiteTile } from "./BookmarkListScreen";
+import useKeyboardHeight from "../widgets/useKeyboardHeight";
 import { fonts, useTheme } from "../theme";
 
 export interface Shared {
@@ -202,19 +203,6 @@ export function ShareSheet(props: PropsType) {
       {content}
     </KeyboardAvoidingView>
   );
-}
-
-// The height of the keyboard when it's shown
-function useKeyboardHeight() {
-  const [height, setHeight] = React.useState(0);
-  React.useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", (e) => setHeight(e.endCoordinates.height));
-    const hide = Keyboard.addListener("keyboardDidHide", () => setHeight(0));
-    return () => {
-      show.remove(); hide.remove();
-    };
-  }, []);
-  return height;
 }
 
 function Heading(props: { title: string, onClose: () => void }) {
