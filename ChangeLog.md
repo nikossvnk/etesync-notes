@@ -1,6 +1,9 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.0.4
+* The Bookmarks tab doesn't show how many bookmarks there are
+
 ## Version 2.0.3
 * Back from the notes right after logging in leaves the app, instead of showing a screen that loads forever
 

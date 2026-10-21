@@ -1,0 +1,1 @@
+* The Bookmarks tab no longer shows how many bookmarks there are

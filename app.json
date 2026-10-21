@@ -2,7 +2,7 @@
   "expo": {
     "name": "EteSync Notes",
     "slug": "etesync_notes",
-    "version": "2.0.3",
+    "version": "2.0.4",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
