@@ -1,1 +1,1 @@
-Secure, end-to-end encrypted, and privacy respecting note taking.
+End-to-end encrypted notes and bookmarks, synced with an Etebase server.

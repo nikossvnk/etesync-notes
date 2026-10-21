@@ -1,0 +1,4 @@
+* A much smaller app: about 33 MB instead of 58 MB
+* "Download Updates" is gone from the settings
+* The background sync, which never ran, is gone: notes are synced while the app is open
+* The list of open source licenses in About is up to date

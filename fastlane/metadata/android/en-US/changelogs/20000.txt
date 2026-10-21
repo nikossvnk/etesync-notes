@@ -1,0 +1,5 @@
+* Bookmarks: a tab next to the notes with saved links, which can be searched, filtered by tag, edited and deleted (with undo)
+* Save links from other apps with "Save to EteSync" in the share menu
+* A new design, with a formatting bar in the editor
+* Select several notes to delete them at once
+* Export all notes to a zip, and import them from one, in the settings

@@ -1,18 +1,26 @@
-Secure, end-to-end encrypted, and privacy respecting note taking app.
+Notes and bookmarks, end-to-end encrypted and synced with an Etebase server: your own (it's free and open source), or an EteSync account.
 
-For syncing your contacts, calendars and tasks, please use the EteSync Sync app.
+This is an independent fork of EteSync Notes. It's not affiliated with or supported by EteSync.
 
-In order to use this application you need to have an account with EteSync (paid hosting), or run your own instance (free and open source). Check out https://www.etesync.com/ for more information.
+Notes
+=====
+* Write in Markdown, with a formatting bar for headings, bold, lists, checklists, quotes and links
+* Checklists can be ticked right in the note
+* Keep notes in notebooks, each with its own color, and filter the list by notebook
+* Search all of your notes
+* Select several notes to delete them at once
+* Export all notes to a zip of Markdown files, and import them from one
 
-
-Easy to Use
-===========
-EteSync is very easy to use. It's as simple as any of your non-encrypted note taking apps. Security doesn't always have to come at a cost.
-
-Secure & Open
-============
-Thanks to zero-knowledge end-to-end encryption, not even we can see your data. Don't believe us? You shouldn't, just verify yourself, both the client and server are open source.
-
-Full History
+Bookmarks
 =========
-A full history of your data is saved in an encrypted change history which means you can review, replay and revert any changes you have made at any point in time.
+* Save links from any app with "Save to EteSync" in the share menu, without leaving that app
+* Add a title, a note and tags, and find them again by searching or by tag
+* A link that's saved already is updated instead of added twice
+
+Private
+=======
+* Everything is encrypted on your phone before it's sent: not even the server can read it
+* Works offline, and syncs when the connection is back
+* Images from the internet in notes are only loaded when you tap them
+* Light and dark themes
+* Free and open source, licensed under the GPL-3.0

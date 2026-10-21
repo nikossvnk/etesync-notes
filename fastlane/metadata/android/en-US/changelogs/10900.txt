@@ -1,0 +1,4 @@
+* New notes open right away: type the title, choose the notebook and write
+* A note without a title is named after its first line
+* The menu shows the server the account is on
+* Links to other sites don't tell them where they came from

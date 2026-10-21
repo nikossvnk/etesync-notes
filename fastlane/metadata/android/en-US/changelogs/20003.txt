@@ -1,0 +1,1 @@
+* Back from the notes right after logging in leaves the app, instead of showing a screen that loads forever
