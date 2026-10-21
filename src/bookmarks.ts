@@ -20,6 +20,23 @@ export interface BookmarkMetadata extends Etebase.ItemMetadata {
   description?: string; // the note
   tags?: string[];
   created?: number;
+  // Where it was saved: see SavedFrom (unset in bookmarks saved before this was recorded)
+  savedFrom?: SavedFrom;
+}
+
+// Where a bookmark was saved: in this app's own screen, shared to it by another app, in etesync-aio
+// (the desktop app), or imported (by etesync-aio) from a browser's bookmarks. The same values as there.
+export type SavedFrom = "android" | "android-share" | "computer" | "import";
+
+// Says where a bookmark was saved, after "Saved Oct 12, 2026": e.g. "from Android (Share)"
+export function savedFromLabel(from: SavedFrom | undefined) {
+  switch (from) {
+    case "android": return "on Android";
+    case "android-share": return "from Android (Share)";
+    case "computer": return "on a computer";
+    case "import": return "imported from a browser";
+    default: return undefined;
+  }
 }
 
 export interface Bookmark {
@@ -31,6 +48,7 @@ export interface Bookmark {
   tags: string[];
   created: number;
   mtime: number;
+  savedFrom?: SavedFrom;
 }
 
 // The details a bookmark is saved with
@@ -55,6 +73,7 @@ export function toBookmark(colUid: string, uid: string, cached: CachedItem): Boo
     tags: meta.tags ?? [],
     created: meta.created ?? mtime,
     mtime,
+    savedFrom: meta.savedFrom,
   };
 }
 
@@ -172,7 +191,7 @@ async function getCollection(etebase: Etebase.Account, colUid?: string) {
   return col;
 }
 
-function metaOf(data: BookmarkData, created: number): BookmarkMetadata {
+function metaOf(data: BookmarkData, created: number, savedFrom: SavedFrom | undefined): BookmarkMetadata {
   const tags = Array.from(new Set(data.tags.map(normalizeTag).filter((x) => x !== "")));
   return {
     name: data.title.trim(),
@@ -181,14 +200,16 @@ function metaOf(data: BookmarkData, created: number): BookmarkMetadata {
     description: data.note.trim() || undefined,
     tags: (tags.length > 0) ? tags : undefined,
     created,
+    savedFrom,
   };
 }
 
-// Saves a new bookmark (to the device, and uploads it), and returns where it is
-export async function createBookmark(etebase: Etebase.Account, data: BookmarkData, colUid?: string, created?: number) {
+// Saves a new bookmark (to the device, and uploads it), and returns where it is. "otherMeta" is the
+// meta of the bookmark it replaces (when it's moved, or undeleted), to keep what this app doesn't know.
+export async function createBookmark(etebase: Etebase.Account, data: BookmarkData, savedFrom: SavedFrom | undefined, colUid?: string, created?: number, otherMeta?: Etebase.ItemMetadata) {
   const col = await getCollection(etebase, colUid);
   const itemMgr = etebase.getCollectionManager().getItemManager(col);
-  const meta = metaOf(data, created ?? (new Date()).getTime());
+  const meta = { ...otherMeta, ...metaOf(data, created ?? (new Date()).getTime(), savedFrom) };
   const item = await itemMgr.create(meta, meta.url);
   await saveItemsLocally(etebase, col, itemMgr, [item]);
   return { colUid: col.uid, uid: item.uid };
@@ -208,10 +229,12 @@ function loadItem(etebase: Etebase.Account, colUid: string, uid: string) {
 }
 
 // Changes a bookmark. Moving it to another collection makes a new one there (an item can't change
-// its collection), so it returns where it is now.
+// its collection), so it returns where it is now. It keeps where it was saved, and what else is in
+// its meta that this app doesn't know (e.g. what etesync-aio adds).
 export async function updateBookmark(etebase: Etebase.Account, bookmark: Bookmark, data: BookmarkData, colUid?: string) {
   if (colUid && (colUid !== bookmark.colUid)) {
-    const ret = await createBookmark(etebase, data, colUid, bookmark.created);
+    const loaded = loadItem(etebase, bookmark.colUid, bookmark.uid);
+    const ret = await createBookmark(etebase, data, bookmark.savedFrom, colUid, bookmark.created, loaded?.item.getMeta());
     await deleteBookmark(etebase, bookmark);
     return ret;
   }
@@ -220,7 +243,7 @@ export async function updateBookmark(etebase: Etebase.Account, bookmark: Bookmar
     throw new Error("The bookmark is not available anymore");
   }
   const { col, itemMgr, item } = loaded;
-  const meta = metaOf(data, bookmark.created);
+  const meta = { ...item.getMeta(), ...metaOf(data, bookmark.created, bookmark.savedFrom) };
   item.setMeta(meta);
   await item.setContent(meta.url);
   await saveItemsLocally(etebase, col, itemMgr, [item]);
@@ -242,7 +265,9 @@ export async function deleteBookmark(etebase: Etebase.Account, bookmark: Bookmar
 
 // Undoes deleting a bookmark. A deleted item can't come back, so it's saved again as a new one.
 export async function restoreBookmark(etebase: Etebase.Account, bookmark: Bookmark) {
-  return createBookmark(etebase, bookmark, bookmark.colUid, bookmark.created);
+  // (the deleted one is still on the device)
+  const deleted = loadItem(etebase, bookmark.colUid, bookmark.uid);
+  return createBookmark(etebase, bookmark, bookmark.savedFrom, bookmark.colUid, bookmark.created, deleted?.item.getMeta());
 }
 
 // Puts a bookmark back the way it was before it was changed (e.g. to undo saving it again from a share)
@@ -252,7 +277,7 @@ export async function revertBookmark(etebase: Etebase.Account, before: Bookmark)
     return;
   }
   const { col, itemMgr, item } = loaded;
-  const meta = metaOf(before, before.created);
+  const meta = { ...item.getMeta(), ...metaOf(before, before.created, before.savedFrom) };
   item.setMeta(meta);
   await item.setContent(meta.url);
   await saveItemsLocally(etebase, col, itemMgr, [item]);

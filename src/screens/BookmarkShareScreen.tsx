@@ -78,7 +78,7 @@ export function ShareSheet(props: PropsType) {
     }
     setBusy(true);
     const data = { url, title, note, tags };
-    const where = (existing) ? await updateBookmark(etebase!, existing, data, colUid) : await createBookmark(etebase!, data, colUid);
+    const where = (existing) ? await updateBookmark(etebase!, existing, data, colUid) : await createBookmark(etebase!, data, "android-share", colUid);
     setSaved({ ...where, before: existing });
     setBusy(false);
   }

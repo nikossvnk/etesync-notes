@@ -18,7 +18,7 @@ import { RootStackParamList } from "../RootStackParamList";
 import { goUp } from "../navigation";
 import {
   Bookmark, BookmarkData, bookmarksFrom, allTags, bookmarkCollections, createBookmark, deleteBookmark, domainOf,
-  fetchTitle, findUrl, isValidUrl, normalizeUrl, updateBookmark, comparableUrl,
+  fetchTitle, findUrl, isValidUrl, normalizeUrl, updateBookmark, comparableUrl, savedFromLabel,
 } from "../bookmarks";
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
 import { SiteTile } from "./BookmarkListScreen";
@@ -139,7 +139,7 @@ export default function BookmarkEditScreen(props: PropsType) {
       if (target) {
         await updateBookmark(etebase!, target, data, colUid);
       } else {
-        await createBookmark(etebase!, data, colUid);
+        await createBookmark(etebase!, data, "android", colUid);
       }
       goUp(navigation, route);
     } catch (e) {
@@ -225,7 +225,7 @@ export default function BookmarkEditScreen(props: PropsType) {
         {editing && (
           <View style={styles.editInfo}>
             <Text style={[styles.small, { color: theme.colors.textMuted }]}>
-              Saved {format(editing.created, "PP")}{(editing.mtime - editing.created > 60000) ? ` · last changed ${format(editing.mtime, "PP")}` : ""}
+              Saved {format(editing.created, "PP")}{(savedFromLabel(editing.savedFrom)) ? ` ${savedFromLabel(editing.savedFrom)}` : ""}{(editing.mtime - editing.created > 60000) ? ` · last changed ${format(editing.mtime, "PP")}` : ""}
             </Text>
             <TouchableRipple
               borderless

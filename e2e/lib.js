@@ -134,7 +134,7 @@ exports.api = {
     await itemMgr.batch([item]);
     await etebase.logout();
   },
-  // All of the bookmarks on the server, deleted ones too, as { collection, name, url, note, tags, deleted, content }
+  // All of the bookmarks on the server, deleted ones too, as { collection, name, url, note, tags, deleted, content, meta }
   async bookmarks() {
     const etebase = await this.login();
     const ret = [];
@@ -146,12 +146,27 @@ exports.api = {
         const meta = item.getMeta();
         ret.push({
           collection: col.getMeta().name, name: meta.name, url: meta.url, note: meta.description, tags: meta.tags,
-          deleted: item.isDeleted, content: (item.isDeleted) ? undefined : await item.getContent(Etebase.OutputFormat.String),
+          deleted: item.isDeleted, content: (item.isDeleted) ? undefined : await item.getContent(Etebase.OutputFormat.String), meta,
         });
       }
     }
     await etebase.logout();
     return ret;
+  },
+  // Adds a bookmark with the meta (and its link as content) directly on the server, in the bookmark
+  // collection with the name (made if there's none)
+  async addBookmark(collectionName, meta) {
+    const etebase = await this.login();
+    const colMgr = etebase.getCollectionManager();
+    let col = (await this.notebooks(etebase, "etebase.bookmark")).find((x) => !x.isDeleted && x.getMeta().name === collectionName);
+    if (!col) {
+      col = await colMgr.create("etebase.bookmark", { name: collectionName, mtime: Date.now() }, "");
+      await colMgr.upload(col);
+    }
+    const itemMgr = colMgr.getItemManager(col);
+    const item = await itemMgr.create({ mtime: Date.now(), created: Date.now(), ...meta }, meta.url);
+    await itemMgr.batch([item]);
+    await etebase.logout();
   },
   // The names of all of the notes on the server ("DELETED:" in front of deleted ones)
   async noteNames() {
