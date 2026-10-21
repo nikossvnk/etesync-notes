@@ -1,7 +1,7 @@
 import * as React from "react";
 import { differenceInCalendarDays, format, isThisYear, isToday, isYesterday } from "date-fns";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Text, TouchableRipple } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSelector } from "react-redux";
 import * as Etebase from "etebase";
@@ -11,7 +11,7 @@ import { useCredentials } from "../credentials";
 import { CachedItem } from "../store";
 import { notebooksSelector, notesSelector } from "../store/selectors";
 import { defaultColor } from "../helpers";
-import { untitled } from "../notes";
+import { isPinned, untitled } from "../notes";
 
 import NotFound from "../widgets/NotFound";
 import Link from "../widgets/Link";
@@ -181,6 +181,59 @@ const NoteRow = React.memo(function NoteRow(props: NoteRowPropsType) {
   );
 });
 
+interface NoteCardPropsType {
+  item: Entry;
+  color: string;
+  // Only passed when notes of more than one notebook are listed
+  notebookName?: string;
+  selected?: boolean;
+  onSelect?: (note: string) => void;
+  onPressNote?: (note: string) => boolean;
+}
+
+// A pinned note, as a card
+const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
+  const { item, color, notebookName, selected, onSelect, onPressNote } = props;
+  const key = `${item.colUid}/${item.uid}`;
+  const theme = useTheme();
+  const mtime = item.meta.mtime;
+  const details = [notebookName, (mtime) ? shortDate(mtime) : undefined].filter(Boolean).join(" · ");
+
+  return (
+    <Link
+      to={`/notebook/${item.colUid}/note/${item.uid}`}
+      onPress={() => onPressNote?.(key) ?? false}
+      renderChild={(props) => (
+        <TouchableRipple
+          {...props}
+          onLongPress={(onSelect) ? () => onSelect(key) : undefined}
+          delayLongPress={400}
+          accessibilityLabel={item.meta.name || untitled}
+          accessibilityState={{ selected: !!selected }}
+          aria-selected={!!selected}
+          style={[styles.card, {
+            backgroundColor: (selected) ? theme.colors.accentTint : theme.colors.surface,
+            borderColor: theme.colors.border,
+          }]}
+        >
+          <View style={styles.cardInner}>
+            <View style={styles.cardTop}>
+              <View style={[styles.rowColor, { backgroundColor: color }]} />
+              {selected && (
+                <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.accent} />
+              )}
+            </View>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={3}>{item.meta.name || untitled}</Text>
+            {!!details && (
+              <Text style={[styles.cardDetails, { color: theme.colors.textMuted }]} numberOfLines={1}>{details}</Text>
+            )}
+          </View>
+        </TouchableRipple>
+      )}
+    />
+  );
+});
+
 interface PropsType {
   colUid?: string;
   sortBy: "name" | "mtime";
@@ -216,7 +269,8 @@ export default function NoteList(props: PropsType) {
   const colUid = props.colUid || undefined;
   const cacheCollection = (colUid) ? cacheCollections.get(colUid) : undefined;
 
-  const entriesList = React.useMemo(() => {
+  // The pinned notes, above the others
+  const [pinnedList, entriesList] = React.useMemo(() => {
     const filterByUid = colUid;
 
     const ret: Entry[] = [];
@@ -233,7 +287,8 @@ export default function NoteList(props: PropsType) {
         ret.push({ ...item, uid, colUid });
       }
     }
-    return ret.sort(getSortFunction(sortBy));
+    ret.sort(getSortFunction(sortBy));
+    return [ret.filter(isPinned), ret.filter((x) => !isPinned(x))];
   }, [cacheItems, sortBy, colUid]);
 
   if (syncGate) {
@@ -263,6 +318,48 @@ export default function NoteList(props: PropsType) {
     );
   }
 
+  // The pinned notes are cards, two next to each other
+  const pinnedRows: Entry[][] = [];
+  for (let i = 0 ; i < pinnedList.length ; i += 2) {
+    pinnedRows.push(pinnedList.slice(i, i + 2));
+  }
+  const sectionTitle = (title: string) => (
+    <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]} accessibilityRole="header">{title}</Text>
+  );
+  const header = (
+    <>
+      {props.header}
+      {(pinnedList.length > 0) && (
+        <>
+          {sectionTitle("Pinned")}
+          <View testID="pinned-notes">
+            {pinnedRows.map((row) => (
+              <View key={row[0].uid} style={styles.cardRow}>
+                {row.map((item) => {
+                  const collection = cacheCollections.get(item.colUid);
+                  return (
+                    <View key={item.uid} style={styles.cardCell}>
+                      <NoteCard
+                        item={item}
+                        color={collection?.meta.color || defaultColor}
+                        notebookName={(colUid) ? undefined : collection?.meta.name}
+                        selected={props.selection?.has(`${item.colUid}/${item.uid}`)}
+                        onSelect={props.onSelect}
+                        onPressNote={props.onPressNote}
+                      />
+                    </View>
+                  );
+                })}
+                {(row.length === 1) && <View style={styles.cardCell} />}
+              </View>
+            ))}
+          </View>
+          {(entriesList.length > 0) && sectionTitle((sortBy === "mtime") ? "Recent" : "Others")}
+        </>
+      )}
+    </>
+  );
+
   return (
     <FlatList
       style={[{ backgroundColor: theme.colors.background }, { flex: 1 }]}
@@ -273,8 +370,8 @@ export default function NoteList(props: PropsType) {
       keyExtractor={(item) => item.uid}
       renderItem={renderEntry}
       maxToRenderPerBatch={10}
-      ListHeaderComponent={props.header}
-      ListEmptyComponent={() => (props.empty && !colUid) ? props.empty : (
+      ListHeaderComponent={header}
+      ListEmptyComponent={() => (pinnedList.length > 0) ? null : (props.empty && !colUid) ? props.empty : (
         <Text style={[styles.empty, { color: theme.colors.textMuted }]}>Notebook is empty</Text>
       )}
     />
@@ -333,5 +430,49 @@ const styles = StyleSheet.create({
   empty: {
     padding: 16,
     fontSize: 15,
+  },
+  sectionTitle: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+    marginHorizontal: 4,
+    marginBottom: 10,
+  },
+  cardRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  // (the cell is half of the row, and the card all of it)
+  cardCell: {
+    flex: 1,
+  },
+  card: {
+    flexGrow: 1,
+    minHeight: 112,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  cardInner: {
+    flex: 1,
+    padding: 14,
+  },
+  cardTop: {
+    height: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardTitle: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  cardDetails: {
+    fontSize: 13,
+    marginTop: "auto",
   },
 });

@@ -10,6 +10,7 @@ import { setSyncCollection, unsetSyncCollection, setSyncGeneral, setCacheCollect
 import { CachedCollection, CachedItem } from "../store/reducers";
 import * as C from "../constants";
 import { arrayToChunkIterator } from "../helpers";
+import { logger } from "../logging";
 
 const cachedSyncManager = new Map<string, SyncManager>();
 export class SyncManager {
@@ -164,13 +165,35 @@ export class SyncManager {
 
     if (cached) {
       const local = itemMgr.cacheLoad(cached.cache);
-      const localMeta = local.getMeta();
+      const localMeta = local.getMeta<{ pinned?: boolean }>();
       const localContent = await local.getContent(Etebase.OutputFormat.String);
+      // The revision the local change was made to, to tell what was changed here
+      const base = (local.isDeleted || remote.isDeleted) ? undefined : await this.fetchRevision(itemMgr, remote, local.encryptedItem.lastEtag);
 
       let identical = local.isDeleted === remote.isDeleted;
       if (identical && !local.isDeleted) {
         const remoteContent = await remote.getContent(Etebase.OutputFormat.String);
         identical = (remoteContent === localContent) && (remote.getMeta().name === localMeta.name);
+      }
+      // Nothing is lost when the note's name and content weren't changed here (e.g. it was only pinned)
+      if (!identical && base) {
+        identical = (base.getMeta().name === localMeta.name) && (await base.getContent(Etebase.OutputFormat.String) === localContent);
+      }
+
+      // Pinning or unpinning it here is kept, on the version from the server
+      const pinChanged = (base) ? (!!base.getMeta<{ pinned?: boolean }>().pinned !== !!localMeta.pinned) : !local.isDeleted;
+      if (identical && !local.isDeleted && pinChanged && (!!remote.getMeta<{ pinned?: boolean }>().pinned !== !!localMeta.pinned)) {
+        const meta = remote.getMeta<{ pinned?: boolean }>();
+        if (localMeta.pinned) {
+          meta.pinned = true;
+        } else {
+          delete meta.pinned;
+        }
+        remote.setMeta(meta);
+        // (it stays queued, to be pushed with the next sync)
+        await asyncDispatch(setCacheItem(col, itemMgr, remote));
+        this.resyncNeeded = true;
+        return;
       }
 
       // A local deletion never wins over a change made elsewhere, the note is just restored.
@@ -191,6 +214,27 @@ export class SyncManager {
 
     await asyncDispatch(setCacheItem(col, itemMgr, remote));
     store.dispatch(unsetSyncItem(col.uid, itemUid));
+  }
+
+  // The revision of an item with the etag, among its last ones, if it can be found
+  private async fetchRevision(itemMgr: Etebase.ItemManager, item: Etebase.Item, etag: string | null) {
+    if (!etag) {
+      return undefined;
+    }
+    try {
+      let iterator: string | undefined;
+      for (let page = 0 ; page < 4 ; page++) {
+        const revisions = await itemMgr.itemRevisions(item, { iterator, limit: 25 });
+        const found = revisions.data.find((x) => x.etag === etag);
+        if (found || revisions.done) {
+          return found;
+        }
+        iterator = revisions.iterator;
+      }
+    } catch (e) {
+      logger.warn(`Fetching the revisions of ${item.uid} failed: ${e}`);
+    }
+    return undefined;
   }
 
   private getPendingCollection(colUid: string) {
