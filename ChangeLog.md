@@ -1,6 +1,11 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.1.0
+* Pinned notes: pin a note from its top bar, or several at once after a long press, and they're shown above the others, as cards. The pin syncs with the note
+* A note that was only pinned on the phone while it was changed elsewhere no longer gets a conflict copy
+* Bookmarks remember where they were saved (in the app, from another app's share menu, or on a computer with EteSync AIO), and their edit screen says so. Editing one on the phone no longer erases that
+
 ## Version 2.0.4
 * The Bookmarks tab doesn't show how many bookmarks there are
 

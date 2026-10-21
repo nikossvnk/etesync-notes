@@ -1,0 +1,2 @@
+* Pinned notes: pin a note from its top bar, or several after a long press, and they're shown above the others. The pin syncs with the note
+* Bookmarks remember where they were saved (in the app, shared from another app, or on a computer), and their edit screen says so
