@@ -16,10 +16,10 @@ const sections: { key: Section, label: string, icon: string, route: string }[] =
 ];
 
 // The two halves of the app, notes and bookmarks, as two tabs at the top of their lists
-export default function SectionTabs(props: { current: Section, count?: number }) {
+export default function SectionTabs(props: { current: Section }) {
   const theme = useTheme();
   const navigation = useNavigation<any>();
-  const { current, count } = props;
+  const { current } = props;
 
   function open(route: string) {
     // One replaces the other, so that the back button doesn't go from one to the other
@@ -48,9 +48,6 @@ export default function SectionTabs(props: { current: Section, count?: number })
             <View style={styles.tabInner}>
               <MaterialCommunityIcons name={section.icon as any} size={17} color={(selected) ? theme.colors.accent : color} />
               <Text style={[styles.label, { color }, (selected) && styles.labelSelected]}>{section.label}</Text>
-              {(selected && (count !== undefined)) && (
-                <Text style={[styles.count, { color: theme.colors.textMuted }]}>{count}</Text>
-              )}
             </View>
           </TouchableRipple>
         );
@@ -87,9 +84,5 @@ const styles = StyleSheet.create({
   },
   labelSelected: {
     fontFamily: fonts.semibold,
-  },
-  count: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
   },
 });

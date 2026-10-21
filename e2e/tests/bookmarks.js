@@ -37,6 +37,8 @@ run(async () => {
     saved[0].content === url && saved[0].collection === "Bookmarks", saved);
   check("then it's back in the list, which shows it", path() === "/bookmarks" && await A.has(`Example ${n}`) &&
     await A.has("example.org") && await A.has("for later") && await A.has("#reading"));
+  const tabText = (await A.p.getByRole("tab", { name: "Bookmarks" }).locator("visible=true").first().innerText()).trim();
+  check("the tab doesn't show how many there are", tabText.replace(/\W/g, "") === "Bookmarks", tabText);
 
   // Finding it
   const search = field("Search bookmarks");

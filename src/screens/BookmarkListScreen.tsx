@@ -135,7 +135,7 @@ export default function BookmarkListScreen() {
 
   const header = (
     <View style={styles.header}>
-      <SectionTabs current="bookmarks" count={bookmarks.length} />
+      <SectionTabs current="bookmarks" />
       <Text style={[styles.bigTitle, { color: theme.colors.text }]} accessibilityRole="header">Bookmarks</Text>
       {(bookmarks.length > 0) && (
         <View style={[styles.search, { backgroundColor: theme.colors.field }]}>
