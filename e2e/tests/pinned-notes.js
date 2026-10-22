@@ -14,6 +14,8 @@ run(async () => {
   const A = await session(b, "A");
   await A.login();
   const pinnedCard = (s, name) => s.p.locator(`[data-testid="pinned-notes"] [aria-label="${name}"] >> visible=true`);
+  const width = async (l) => (await l.first().boundingBox()).width;
+  const section = () => A.p.locator('[data-testid="pinned-notes"] >> visible=true').first();
   const row = (name) => A.p.locator(`a[href*="/note/"] [aria-label="${name}"] >> visible=true`).first();
 
   // Pinning with a long press, from the list
@@ -30,6 +32,9 @@ run(async () => {
   check("it's shown in the pinned notes, and not among the others",
     await pinnedCard(A, one).count() === 1 && await A.p.locator(`a[href*="/note/"] [aria-label="${one}"] >> visible=true`).count() === 1);
   check("the list has a pinned section", /PINNED/i.test(await A.text()));
+  check("alone, its card is as wide as the row", Math.abs(await width(pinnedCard(A, one)) - await width(section())) < 2,
+    [await width(pinnedCard(A, one)), await width(section())]);
+  check("and it shows the beginning of the note", (await pinnedCard(A, one).first().innerText()).includes("content of " + one));
   await pinnedCard(A, one).first().click(); await A.wait(2500);
   check("its card opens the note", (await A.viewerText()).includes("content of " + one));
 
@@ -41,6 +46,9 @@ run(async () => {
   check("then it's an unpin button", await A.p.getByRole("button", { name: /^unpin$/i }).locator("visible=true").count() === 1);
   await A.back();
   check("and it's shown in the pinned notes", await pinnedCard(A, two).count() === 1);
+  const [w1, w2, ws] = [await width(pinnedCard(A, one)), await width(pinnedCard(A, two)), await width(section())];
+  check("two cards share the row", Math.abs(w1 - w2) < 2 && w1 < ws * 0.55, [w1, w2, ws]);
+  check("and then they don't show the beginning of the notes", !(await pinnedCard(A, one).first().innerText()).includes("content of"));
 
   // Another device gets the pins
   const B = await session(b, "B");

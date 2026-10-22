@@ -183,9 +183,12 @@ const NoteRow = React.memo(function NoteRow(props: NoteRowPropsType) {
 
 interface NoteCardPropsType {
   item: Entry;
+  itemMgr: Etebase.ItemManager | undefined;
   color: string;
   // Only passed when notes of more than one notebook are listed
   notebookName?: string;
+  // The last one when there's an odd number of them: as wide as two, with the beginning of the note
+  wide: boolean;
   selected?: boolean;
   onSelect?: (note: string) => void;
   onPressNote?: (note: string) => boolean;
@@ -193,9 +196,10 @@ interface NoteCardPropsType {
 
 // A pinned note, as a card
 const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
-  const { item, color, notebookName, selected, onSelect, onPressNote } = props;
+  const { item, itemMgr, color, notebookName, wide, selected, onSelect, onPressNote } = props;
   const key = `${item.colUid}/${item.uid}`;
   const theme = useTheme();
+  const preview = useNotePreview((wide) ? itemMgr : undefined, item.cache);
   const mtime = item.meta.mtime;
   const details = [notebookName, (mtime) ? shortDate(mtime) : undefined].filter(Boolean).join(" · ");
 
@@ -223,7 +227,10 @@ const NoteCard = React.memo(function NoteCard(props: NoteCardPropsType) {
                 <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.accent} />
               )}
             </View>
-            <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={3}>{item.meta.name || untitled}</Text>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={(wide) ? 2 : 3}>{item.meta.name || untitled}</Text>
+            {wide && !!preview && (
+              <Text style={[styles.cardPreview, { color: theme.colors.textSecondary }]} numberOfLines={1}>{preview}</Text>
+            )}
             {!!details && (
               <Text style={[styles.cardDetails, { color: theme.colors.textMuted }]} numberOfLines={1}>{details}</Text>
             )}
@@ -318,7 +325,8 @@ export default function NoteList(props: PropsType) {
     );
   }
 
-  // The pinned notes are cards, two next to each other
+  // The pinned notes are cards, two next to each other (the last one is as wide as the row when
+  // there's an odd number of them, and shows the beginning of the note)
   const pinnedRows: Entry[][] = [];
   for (let i = 0 ; i < pinnedList.length ; i += 2) {
     pinnedRows.push(pinnedList.slice(i, i + 2));
@@ -341,8 +349,10 @@ export default function NoteList(props: PropsType) {
                     <View key={item.uid} style={styles.cardCell}>
                       <NoteCard
                         item={item}
+                        itemMgr={getItemMgr(item.colUid)}
                         color={collection?.meta.color || defaultColor}
                         notebookName={(colUid) ? undefined : collection?.meta.name}
+                        wide={row.length === 1}
                         selected={props.selection?.has(`${item.colUid}/${item.uid}`)}
                         onSelect={props.onSelect}
                         onPressNote={props.onPressNote}
@@ -350,7 +360,6 @@ export default function NoteList(props: PropsType) {
                     </View>
                   );
                 })}
-                {(row.length === 1) && <View style={styles.cardCell} />}
               </View>
             ))}
           </View>
@@ -444,7 +453,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  // (the cell is half of the row, and the card all of it)
+  // (the cell is half of the row, or all of it when it's alone, and the card all of the cell)
   cardCell: {
     flex: 1,
   },
@@ -469,6 +478,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     marginTop: 2,
+    marginBottom: 6,
+  },
+  cardPreview: {
+    fontSize: 14,
+    lineHeight: 20,
     marginBottom: 6,
   },
   cardDetails: {
