@@ -3,6 +3,7 @@
 
 import * as Etebase from "etebase";
 import { Platform } from "react-native";
+import { createSelector } from "reselect";
 
 import * as C from "./constants";
 import { store } from "./store";
@@ -169,12 +170,14 @@ export function normalizeTag(tag: string) {
   return tag.trim().replace(/^#+/, "").replace(/\s+/g, "-").toLowerCase();
 }
 
-// The bookmark collections, the default one ("Bookmarks") first
-export function bookmarkCollections(state: any) {
-  return Array.from(bookmarkCollectionsSelector(state).entries())
-    .map(([uid, col]) => ({ uid, name: col.meta.name ?? defaultCollectionName }))
-    .sort((a, b) => ((a.name === defaultCollectionName) ? -1 : (b.name === defaultCollectionName) ? 1 : a.name.localeCompare(b.name)));
-}
+// The bookmark lists (collections), the default one ("Bookmarks") first
+export const bookmarkListsSelector = createSelector(
+  bookmarkCollectionsSelector,
+  (cols) => Array.from(cols.entries())
+    .map(([uid, col]) => ({ uid, name: col.meta.name ?? defaultCollectionName, description: col.meta.description, color: col.meta.color }))
+    .sort((a, b) => ((a.name === defaultCollectionName) ? -1 : (b.name === defaultCollectionName) ? 1 : a.name.localeCompare(b.name)))
+);
+
 
 // The collection to save in: the given one, or else the first one. There's always one: it's created
 // (on the device, and uploaded with the next sync) when there's none yet.
@@ -182,7 +185,7 @@ async function getCollection(etebase: Etebase.Account, colUid?: string) {
   const colMgr = etebase.getCollectionManager();
   const state = store.getState() as any;
   const cols = bookmarkCollectionsSelector(state);
-  const uid = (colUid && cols.has(colUid)) ? colUid : bookmarkCollections(state)[0]?.uid;
+  const uid = (colUid && cols.has(colUid)) ? colUid : bookmarkListsSelector(state)[0]?.uid;
   if (uid) {
     return colMgr.cacheLoad(cols.get(uid)!.cache);
   }

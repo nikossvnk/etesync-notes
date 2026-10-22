@@ -32,5 +32,12 @@ function itemsOfType(collections: (state: CacheState) => CachedCollectionsData) 
 
 export const notebooksSelector = collectionsOfType(C.colType);
 export const notesSelector = itemsOfType(notebooksSelector);
+// The notebooks by name, as they're listed and chosen from
+export const sortedNotebooksSelector = createSelector(
+  notebooksSelector,
+  (cols) => Array.from(cols.entries())
+    .map(([uid, col]) => ({ uid, name: col.meta.name ?? "", description: col.meta.description, color: col.meta.color }))
+    .sort((a, b) => (a.name.toUpperCase() >= b.name.toUpperCase()) ? 1 : -1)
+);
 export const bookmarkCollectionsSelector = collectionsOfType(C.bookmarkColType);
 export const bookmarksSelector = itemsOfType(bookmarkCollectionsSelector);

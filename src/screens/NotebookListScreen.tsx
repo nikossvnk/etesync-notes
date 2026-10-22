@@ -1,14 +1,12 @@
 import * as React from "react";
 import { StyleSheet, FlatList, Platform, View, BackHandler } from "react-native";
-import { Appbar as PaperAppbar, List, FAB, Text } from "react-native-paper";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Appbar as PaperAppbar, List, FAB } from "react-native-paper";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
-import * as Etebase from "etebase";
 
 import { useSyncGate, usePendingCount } from "../SyncGate";
 import { StoreState } from "../store";
-import { notebooksSelector, notesSelector } from "../store/selectors";
+import { notesSelector, sortedNotebooksSelector } from "../store/selectors";
 import { SyncManager } from "../sync/SyncManager";
 import { performSync } from "../store/actions";
 import { useCredentials } from "../credentials";
@@ -18,29 +16,20 @@ import Appbar from "../widgets/Appbar";
 import AppbarAction from "../widgets/AppbarAction";
 import AppbarButton from "../widgets/AppbarButton";
 import NotFound from "../widgets/NotFound";
-import GroupedRow from "../widgets/GroupedRow";
-import { defaultColor } from "../helpers";
+import CollectionRow from "../widgets/CollectionRow";
 import { DefaultNavigationProp } from "../RootStackParamList";
-import { fonts, useTheme } from "../theme";
+import { useTheme } from "../theme";
 
 interface PropsType {
   colUid?: string;
   active: boolean;
 }
 
-type Notebook = {
-  meta: Etebase.ItemMetadata;
-  uid: string;
-};
+type Notebook = ReturnType<typeof sortedNotebooksSelector>[number];
 
 export default function NotebookListScreen(props: PropsType) {
-  const cacheCollections = useSelector(notebooksSelector);
+  const notebooks = useSelector(sortedNotebooksSelector);
   const cacheItems = useSelector(notesSelector);
-  const notebooks: Notebook[] = React.useMemo(() => Array.from(cacheCollections
-    .sort((a, b) => (a.meta!.name!.toUpperCase() >= b.meta!.name!.toUpperCase()) ? 1 : -1)
-    .map(({ meta }, uid) => {return { meta, uid }})
-    .values()
-  ), [cacheCollections]);
   const navigation = useNavigation<DefaultNavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
@@ -63,7 +52,7 @@ export default function NotebookListScreen(props: PropsType) {
 
     navigation.setOptions({
       header: (props) => <Appbar {...props} menuFallback />,
-      title: notebook?.meta.name || "Notebooks",
+      title: notebook?.name || "Notebooks",
       // (set by the list of notes)
       headerTitle: undefined,
       headerShadowVisible: undefined,
@@ -98,31 +87,16 @@ export default function NotebookListScreen(props: PropsType) {
   }
 
   function renderItem({ item, index }: { item: Notebook, index: number }) {
-    const first = index === 0;
-    const last = index === notebooks.length - 1;
-    const count = cacheItems.get(item.uid)?.count((x) => !x.isDeleted) ?? 0;
     return (
-      <GroupedRow
-        first={first}
-        last={last}
-        accessibilityRole="button"
-        onPress={() => {
-          setNotebook(item);
-        }}
-        style={styles.row}
-      >
-        <View style={styles.rowInner}>
-          <View style={[styles.color, { backgroundColor: item.meta.color || defaultColor }]} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.name, { color: theme.colors.text }]} numberOfLines={1}>{item.meta.name!}</Text>
-            {!!item.meta.description && (
-              <Text style={[styles.description, { color: theme.colors.textSecondary }]} numberOfLines={2}>{item.meta.description}</Text>
-            )}
-          </View>
-          <Text style={[styles.count, { color: theme.colors.textMuted }]}>{count}</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textMuted} />
-        </View>
-      </GroupedRow>
+      <CollectionRow
+        name={item.name}
+        description={item.description}
+        color={item.color}
+        count={cacheItems.get(item.uid)?.count((x) => !x.isDeleted) ?? 0}
+        first={index === 0}
+        last={index === notebooks.length - 1}
+        onPress={() => setNotebook(item)}
+      />
     );
   }
 
@@ -175,34 +149,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 112,
   },
-  row: {
-    paddingLeft: 16,
-    paddingRight: 8,
-    paddingVertical: 14,
-  },
-  rowInner: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  color: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    marginRight: 12,
-  },
-  name: {
-    fontFamily: fonts.semibold,
-    fontSize: 15,
-  },
-  description: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  count: {
-    fontSize: 13,
-    marginLeft: 8,
-    marginRight: 2,
-  },
 });
 
 interface RightActionPropsType {
@@ -252,6 +198,14 @@ function RightAction(props: RightActionPropsType) {
         disabled={isSyncing}
         onPress={refresh}
       />
+      {colUid && (
+        <AppbarButton
+          icon="pencil-outline"
+          title="Edit notebook"
+          disabled={isSyncing}
+          onPress={() => navigation.navigate("CollectionEdit", { colUid })}
+        />
+      )}
       {colUid && (
         <AppbarButton
           icon="notebook"

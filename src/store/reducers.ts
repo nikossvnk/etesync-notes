@@ -380,6 +380,8 @@ export interface SettingsType {
   ranWizrd: boolean;
   theme: "auto" | "dark" | "light";
   fontSize: number;
+  // The bookmark list whose bookmarks are shown, or all of them
+  bookmarksFilter?: string | null;
   viewSettings: {
     defaultViewMode: ViewModeKey;
     lastViewMode: boolean;

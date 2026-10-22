@@ -10,10 +10,10 @@ import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCredentials } from "../credentials";
-import { bookmarkCollectionsSelector, bookmarksSelector } from "../store/selectors";
+import { bookmarksSelector } from "../store/selectors";
 import { RootStackParamList } from "../RootStackParamList";
 import {
-  Bookmark, allTags, bookmarkCollections, bookmarkTitle, bookmarksFrom, comparableUrl, createBookmark, deleteBookmark,
+  Bookmark, allTags, bookmarkListsSelector, bookmarkTitle, bookmarksFrom, comparableUrl, createBookmark, deleteBookmark,
   domainOf, fromShared, isValidUrl, normalizeUrl, revertBookmark, updateBookmark,
 } from "../bookmarks";
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
@@ -52,8 +52,7 @@ export function ShareSheet(props: PropsType) {
   const bookmarkItems = useSelector(bookmarksSelector);
   const bookmarks = React.useMemo(() => bookmarksFrom(bookmarkItems), [bookmarkItems]);
   const knownTags = React.useMemo(() => allTags(bookmarks), [bookmarks]);
-  const cols = useSelector(bookmarkCollectionsSelector);
-  const collections = React.useMemo(() => bookmarkCollections({ cache: { collections: cols } }), [cols]);
+  const collections = useSelector(bookmarkListsSelector);
   const { shared, onClose, onOpenBookmarks, onMoreOptions, onLogin } = props;
 
   const initial = React.useMemo(() => {

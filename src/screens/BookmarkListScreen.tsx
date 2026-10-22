@@ -5,23 +5,26 @@ import * as React from "react";
 import { FlatList, Linking, Platform, Share, StyleSheet, TextInput, View } from "react-native";
 import { FAB, Snackbar, Text, TouchableRipple } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { RouteProp, useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import * as Clipboard from "expo-clipboard";
 
 import { useSyncGate, usePendingCount } from "../SyncGate";
 import { StoreState } from "../store";
 import { bookmarksSelector } from "../store/selectors";
-import { performSync, pushMessage } from "../store/actions";
+import { performSync, pushMessage, setSettings } from "../store/actions";
 import { SyncManager } from "../sync/SyncManager";
 import { useCredentials } from "../credentials";
-import { Bookmark, bookmarksFrom, allTags, bookmarkTitle, deleteBookmark, domainOf, restoreBookmark } from "../bookmarks";
+import { Bookmark, bookmarksFrom, allTags, bookmarkListsSelector, bookmarkTitle, deleteBookmark, domainOf, restoreBookmark } from "../bookmarks";
 import { shortDate } from "../components/NoteList";
+import CollectionFilter from "../components/CollectionFilter";
+import { RootStackParamList } from "../RootStackParamList";
 
 import Appbar from "../widgets/Appbar";
 import AppbarButton from "../widgets/AppbarButton";
 import BottomSheet from "../widgets/BottomSheet";
 import GroupedRow from "../widgets/GroupedRow";
+import NotFound from "../widgets/NotFound";
 import SectionTabs from "../widgets/SectionTabs";
 import { fonts, useTheme } from "../theme";
 
@@ -61,7 +64,13 @@ export function openLink(url: string) {
   Linking.openURL(url).catch(() => undefined);
 }
 
-export default function BookmarkListScreen() {
+interface PropsType {
+  route: RouteProp<RootStackParamList, "Bookmarks"> | RouteProp<RootStackParamList, "BookmarkList">;
+}
+
+// All of the bookmarks (with chips to show one list's), or the bookmarks of one list (opened from the
+// bookmark lists, as a notebook is from the notebooks)
+export default function BookmarkListScreen(props: PropsType) {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const theme = useTheme();
@@ -69,6 +78,14 @@ export default function BookmarkListScreen() {
   const etebase = useCredentials();
   const bookmarkItems = useSelector(bookmarksSelector);
   const bookmarks = React.useMemo(() => bookmarksFrom(bookmarkItems), [bookmarkItems]);
+  const lists = useSelector(bookmarkListsSelector);
+  const bookmarksFilter = useSelector((state: StoreState) => state.settings.bookmarksFilter);
+  // The list opened from the bookmark lists, if it's one
+  const listUid = (props.route.params as { colUid?: string } | undefined)?.colUid;
+  const list = lists.find((x) => x.uid === listUid);
+  // The list whose bookmarks are shown: the one opened, or the one chosen with the chips (if it's still there)
+  const colUid = listUid ?? ((lists.some((x) => x.uid === bookmarksFilter)) ? bookmarksFilter! : undefined);
+  const inList = React.useMemo(() => (colUid) ? bookmarks.filter((x) => x.colUid === colUid) : bookmarks, [bookmarks, colUid]);
   const [query, setQuery] = React.useState("");
   const [tag, setTag] = React.useState(ALL);
   const [menuFor, setMenuFor] = React.useState<Bookmark>();
@@ -77,31 +94,47 @@ export default function BookmarkListScreen() {
   React.useEffect(() => {
     navigation.setOptions({
       header: (props: any) => <Appbar {...props} menuFallback />,
-      title: "Bookmarks",
-      headerTitle: () => <View style={{ flex: 1 }} />,
-      headerShadowVisible: false,
-      headerRight: () => <SyncButton />,
+      // The list that's opened has its name in the bar, the others a big title under it
+      title: (listUid) ? (list?.name ?? "") : "Bookmarks",
+      headerTitle: (listUid) ? undefined : () => <View style={{ flex: 1 }} />,
+      headerShadowVisible: (listUid) ? undefined : false,
+      headerRight: () => (
+        <View style={{ flexDirection: "row" }}>
+          <SyncButton />
+          {colUid && (
+            <AppbarButton
+              icon="pencil-outline"
+              title="Edit bookmark list"
+              onPress={() => navigation.navigate("BookmarkListEdit", { colUid })}
+            />
+          )}
+        </View>
+      ),
     });
-  }, [navigation]);
+  }, [navigation, listUid, list?.name, colUid]);
 
-  const tags = React.useMemo(() => allTags(bookmarks), [bookmarks]);
-  const hasUntagged = bookmarks.some((x) => x.tags.length === 0);
+  const tags = React.useMemo(() => allTags(inList), [inList]);
+  const hasUntagged = inList.some((x) => x.tags.length === 0);
   // The chosen tag may be gone (e.g. its last bookmark was deleted)
   const filterTag = ((tag === ALL) || (tag === UNTAGGED) || tags.includes(tag)) ? tag : ALL;
 
   const shown = React.useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter((x) => x !== "");
-    return bookmarks.filter((bookmark) => {
+    return inList.filter((bookmark) => {
       if ((filterTag === UNTAGGED) ? (bookmark.tags.length > 0) : ((filterTag !== ALL) && !bookmark.tags.includes(filterTag))) {
         return false;
       }
       const text = [bookmark.title, bookmark.url, bookmark.note, ...bookmark.tags.map((x) => "#" + x)].join(" ").toLowerCase();
       return words.every((word) => text.includes(word));
     });
-  }, [bookmarks, query, filterTag]);
+  }, [inList, query, filterTag]);
 
   if (syncGate) {
     return syncGate;
+  }
+
+  if (listUid && !list) {
+    return <NotFound />;
   }
 
   async function remove(bookmark: Bookmark) {
@@ -135,9 +168,13 @@ export default function BookmarkListScreen() {
 
   const header = (
     <View style={styles.header}>
-      <SectionTabs current="bookmarks" />
-      <Text style={[styles.bigTitle, { color: theme.colors.text }]} accessibilityRole="header">Bookmarks</Text>
-      {(bookmarks.length > 0) && (
+      {!listUid && (
+        <>
+          <SectionTabs current="bookmarks" />
+          <Text style={[styles.bigTitle, { color: theme.colors.text }]} accessibilityRole="header">Bookmarks</Text>
+        </>
+      )}
+      {(inList.length > 0) && (
         <View style={[styles.search, { backgroundColor: theme.colors.field }]}>
           <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.textMuted} />
           <TextInput
@@ -156,6 +193,16 @@ export default function BookmarkListScreen() {
             </TouchableRipple>
           )}
         </View>
+      )}
+      {!listUid && (
+        <CollectionFilter
+          collections={lists}
+          value={colUid}
+          // (there are tag chips under them, which have an "All" too)
+          allLabel="All lists"
+          onChange={(value) => dispatch(setSettings({ bookmarksFilter: value ?? null }) as any)}
+          style={styles.lists}
+        />
       )}
       {(tags.length > 0) && (
         <FlatList
@@ -195,11 +242,11 @@ export default function BookmarkListScreen() {
             onMenu={() => setMenuFor(item)}
           />
         )}
-        ListEmptyComponent={(bookmarks.length === 0) ? (
+        ListEmptyComponent={((bookmarks.length === 0) && !listUid) ? (
           <EmptyBookmarks onAdd={() => navigation.navigate("BookmarkCreate")} />
         ) : (
           <Text style={[styles.none, { color: theme.colors.textMuted }]}>
-            {(query !== "") ? "No bookmarks match the search." : "No bookmarks with this tag."}
+            {(inList.length === 0) ? "No bookmarks in this list." : (query !== "") ? "No bookmarks match the search." : "No bookmarks with this tag."}
           </Text>
         )}
       />
@@ -211,7 +258,7 @@ export default function BookmarkListScreen() {
         accessibilityLabel="Add bookmark"
         color={theme.colors.onAccent}
         style={[styles.fab, { backgroundColor: theme.colors.accent }, (deleted) && styles.fabRaised]}
-        onPress={() => navigation.navigate("BookmarkCreate")}
+        onPress={() => navigation.navigate("BookmarkCreate", (colUid) ? { colUid } : undefined)}
       />
 
       <BottomSheet visible={!!menuFor} onDismiss={() => setMenuFor(undefined)} label={(menuFor) ? bookmarkTitle(menuFor) : ""} role="menu">
@@ -252,7 +299,7 @@ export default function BookmarkListScreen() {
   );
 }
 
-function SyncButton() {
+export function SyncButton() {
   const etebase = useCredentials();
   const dispatch = useDispatch();
   const isSyncing = useSelector((state: StoreState) => state.syncCount) > 0;
@@ -423,6 +470,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  lists: {
+    marginHorizontal: -20,
   },
   chips: {
     marginTop: 12,

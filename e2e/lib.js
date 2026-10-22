@@ -168,6 +168,22 @@ exports.api = {
     await itemMgr.batch([item]);
     await etebase.logout();
   },
+  // The notebooks or bookmark lists (by type) on the server, deleted ones too, as { uid, name, meta, deleted }
+  async collections(type = "etebase.md.note") {
+    const etebase = await this.login();
+    const ret = (await this.notebooks(etebase, type)).map((x) => ({ uid: x.uid, name: x.getMeta().name, meta: x.getMeta(), deleted: x.isDeleted }));
+    await etebase.logout();
+    return ret;
+  },
+  // Adds keys to the meta of the notebook or bookmark list with the name, directly on the server
+  async addCollectionMeta(type, name, extra) {
+    const etebase = await this.login();
+    const colMgr = etebase.getCollectionManager();
+    const col = (await this.notebooks(etebase, type)).find((x) => !x.isDeleted && x.getMeta().name === name);
+    col.setMeta({ ...col.getMeta(), ...extra });
+    await colMgr.upload(col);
+    await etebase.logout();
+  },
   // The names of all of the notes on the server ("DELETED:" in front of deleted ones)
   async noteNames() {
     const etebase = await this.login();
@@ -350,7 +366,7 @@ exports.session = async (browser, tag, viewport = { width: 412, height: 860 }) =
   };
   s.deleteNotebook = async (name) => {
     await s.editNotebook(name);
-    await btn(/^delete collection$/i).click(); await wait(800);
+    await btn(/^delete notebook$/i).click(); await wait(800);
     await btn(/^ok$/i).click(); await wait(2500);
     s.inNotebook = false; // a fresh home screen is shown after deleting
   };

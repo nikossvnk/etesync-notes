@@ -85,7 +85,7 @@ run(async () => {
   await menu("Edit"); await at("edit the notebook", "/notebook/ID/edit", true);
   await back(); await at("back: manage", "/notebook/ID/manage", true);
   await menu("Edit");
-  await A.p.getByRole("button", { name: /^delete collection$/i }).locator("visible=true").last().click(); await A.wait(800);
+  await A.p.getByRole("button", { name: /^delete notebook$/i }).locator("visible=true").last().click(); await A.wait(800);
   await A.p.getByRole("button", { name: /^ok$/i }).locator("visible=true").last().click(); await A.wait(3000);
   await at("deleted: home", "/", false);
   const t = await A.text();

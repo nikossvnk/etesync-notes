@@ -8,9 +8,11 @@ import { RootStackParamList } from "./RootStackParamList";
 type RouteName = keyof RootStackParamList;
 
 interface UpTarget {
-  // The screens that count as the level above. The first available one is opened if none of them is found.
+  // The screens that count as the level above (the nearest one in the history). The first available one
+  // is opened if none of them is found.
   names: RouteName[];
-  // The params the screen above has to have, and is opened with
+  // The params the screen above has to have (when it has them at all: the lists of all notes or
+  // bookmarks have none), and is opened with
   params?: (params: any) => Record<string, string>;
 }
 
@@ -29,10 +31,15 @@ const upTargets: { [name in RouteName]?: UpTarget } = {
   NoteMove: { names: ["NoteEdit"], params: note },
   CollectionCreate: { names: [...lists, "NoteCreate"] },
   CollectionChangelog: { names: lists },
-  CollectionEdit: { names: ["CollectionChangelog"], params: notebook },
+  // (from the notebook's management, or the list of its notes)
+  CollectionEdit: { names: ["CollectionChangelog", ...lists, "Notebooks"], params: notebook },
   CollectionMembers: { names: ["CollectionChangelog"], params: notebook },
-  BookmarkCreate: { names: ["Bookmarks"] },
-  BookmarkEdit: { names: ["Bookmarks"] },
+  BookmarkList: { names: ["BookmarkLists", "Bookmarks"] },
+  BookmarkListCreate: { names: ["BookmarkLists", "Bookmarks"] },
+  BookmarkListEdit: { names: ["BookmarkList", "Bookmarks", "BookmarkLists"], params: notebook },
+  // (the nearest one of them, or the list of all bookmarks when there's neither)
+  BookmarkCreate: { names: ["Bookmarks", "BookmarkList"] },
+  BookmarkEdit: { names: ["Bookmarks", "BookmarkList"] },
   BookmarkShare: { names: ["Bookmarks"] },
   Invitations: { names: lists },
   Settings: { names: [...lists, "Login", "Signup"] },
@@ -62,7 +69,7 @@ export function goUp(navigation: NavigationProp<any>, route: { key: string, name
     const candidate = state.routes[i];
     const candidateParams: any = candidate.params ?? {};
     if (target.names.includes(candidate.name as RouteName) &&
-      (!params || Object.keys(params).every((key) => candidateParams[key] === params[key]))) {
+      (!params || Object.keys(params).every((key) => !(key in candidateParams) || (candidateParams[key] === params[key])))) {
       navigation.dispatch({ ...StackActions.pop(index - i), source: route.key, target: state.key });
       return;
     }

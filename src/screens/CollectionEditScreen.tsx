@@ -13,6 +13,7 @@ import { goUp } from "../navigation";
 import { useCredentials } from "../credentials";
 import { StoreState, useAsyncDispatch } from "../store";
 import { pushMessage } from "../store/actions";
+import { bookmarksSelector } from "../store/selectors";
 import { saveCollectionLocally, deleteCollectionLocally } from "../sync/SyncManager";
 
 import TextInput from "../widgets/TextInput";
@@ -35,12 +36,19 @@ interface FormErrors {
   color?: string;
 }
 
-type NavigationProp = StackNavigationProp<RootStackParamList, "CollectionEdit"> | StackNavigationProp<RootStackParamList, "CollectionCreate">;
+type RouteName = "CollectionEdit" | "CollectionCreate" | "BookmarkListEdit" | "BookmarkListCreate";
+type NavigationProp = StackNavigationProp<RootStackParamList, RouteName>;
 
 interface PropsType {
-  route: RouteProp<RootStackParamList, "CollectionEdit"> | RouteProp<RootStackParamList, "CollectionCreate">;
+  route: RouteProp<RootStackParamList, RouteName>;
 }
 
+// What a notebook or a bookmark list is called, as both are made and changed here
+function nounOf(bookmarks: boolean) {
+  return (bookmarks) ? "Bookmark list" : "Notebook";
+}
+
+// Makes or changes a notebook or a bookmark list (both are collections with a name, a description and a colour)
 export default function CollectionEditScreen(props: PropsType) {
   const [errors, setErrors] = React.useState({} as FormErrors);
   const [name, setName] = React.useState<string>("");
@@ -53,7 +61,9 @@ export default function CollectionEditScreen(props: PropsType) {
   const navigationState = useNavigationState((state) => (state.index > 0) ? state.routes[state.index - 1] : null);
   const etebase = useCredentials()!;
   const [loading, error, setPromise] = useLoading();
-  const colType = C.colType;
+  const bookmarks = props.route.name.startsWith("BookmarkList");
+  const colType = (bookmarks) ? C.bookmarkColType : C.colType;
+  const noun = nounOf(bookmarks);
 
   const colUid = props.route.params?.colUid;
   React.useEffect(() => {
@@ -77,12 +87,12 @@ export default function CollectionEditScreen(props: PropsType) {
 
   React.useEffect(() => {
     navigation.setOptions({
-      title: (colUid) ? "Edit Notebook" : "New Notebook",
+      title: `${(colUid) ? "Edit" : "New"} ${noun.toLowerCase()}`,
       headerRight: () => (
-        <RightAction colUid={colUid} />
+        <RightAction colUid={colUid} bookmarks={bookmarks} />
       ),
     });
-  }, [colUid]);
+  }, [colUid, bookmarks]);
 
   if (syncGate) {
     return syncGate;
@@ -124,10 +134,13 @@ export default function CollectionEditScreen(props: PropsType) {
 
       await saveCollectionLocally(etebase, colMgr, collection, !colUid);
       if (colUid) {
-        dispatch(pushMessage({ message: "Notebook saved", severity: "success" }));
+        dispatch(pushMessage({ message: `${noun} saved`, severity: "success" }));
         goUp(navigation, props.route);
+      } else if (bookmarks) {
+        dispatch(pushMessage({ message: `${noun} created`, severity: "success" }));
+        navigation.replace("BookmarkList", { colUid: collection.uid });
       } else {
-        dispatch(pushMessage({ message: "Notebook created", severity: "success" }));
+        dispatch(pushMessage({ message: `${noun} created`, severity: "success" }));
 
         const previousScreen = navigationState?.name;
         if (navigationState && previousScreen === "NoteCreate") {
@@ -211,14 +224,16 @@ export default function CollectionEditScreen(props: PropsType) {
   );
 }
 
-function RightAction(props: { colUid: string | undefined }) {
+function RightAction(props: { colUid: string | undefined, bookmarks: boolean }) {
   const [confirmationVisible, setConfirmationVisible] = React.useState(false);
   const navigation = useNavigation<DefaultNavigationProp>();
   const etebase = useCredentials()!;
   const dispatch = useAsyncDispatch();
   const cacheCollections = useSelector((state: StoreState) => state.cache.collections);
+  const { colUid, bookmarks } = props;
+  const bookmarkCount = useSelector((state: StoreState) => (colUid) ? bookmarksSelector(state).get(colUid)?.count((x) => !x.isDeleted) ?? 0 : 0);
+  const noun = nounOf(bookmarks);
 
-  const colUid = props.colUid;
   if (!colUid) {
     return <React.Fragment />;
   }
@@ -227,7 +242,7 @@ function RightAction(props: { colUid: string | undefined }) {
     <React.Fragment>
       <AppbarAction
         icon="delete"
-        accessibilityLabel="Delete collection"
+        accessibilityLabel={`Delete ${noun.toLowerCase()}`}
         onPress={() => {
           setConfirmationVisible(true);
         }}
@@ -245,14 +260,24 @@ function RightAction(props: { colUid: string | undefined }) {
           collection.delete();
           deleteCollectionLocally(etebase, colMgr, collection);
           setConfirmationVisible(false);
-          dispatch(pushMessage({ message: "Collection deleted", severity: "success" }));
-          navigation.popTo("Home");
+          dispatch(pushMessage({ message: `${noun} deleted`, severity: "success" }));
+          if (bookmarks) {
+            // Back to where the list was opened from
+            const opened = navigation.getState()?.routes.some((x) => x.name === "BookmarkLists");
+            navigation.popTo((opened) ? "BookmarkLists" : "Bookmarks");
+          } else {
+            navigation.popTo("Home");
+          }
         }}
         onCancel={() => {
           setConfirmationVisible(false);
         }}
       >
-        <Paragraph>This colection and all of its data will be removed from the server.</Paragraph>
+        <Paragraph>
+          {(!bookmarks) ? "This notebook and all of its notes will be removed from the server." :
+            (bookmarkCount === 0) ? "This bookmark list will be removed from the server." :
+              `This bookmark list and its ${(bookmarkCount === 1) ? "bookmark" : `${bookmarkCount} bookmarks`} will be removed from the server.`}
+        </Paragraph>
       </ConfirmationDialog>
     </React.Fragment>
   );

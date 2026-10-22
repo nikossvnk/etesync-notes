@@ -10,13 +10,13 @@ import { useSelector, useDispatch } from "react-redux";
 
 import { useSyncGate, usePendingCount } from "../SyncGate";
 import { StoreState } from "../store";
-import { notesSelector } from "../store/selectors";
+import { notesSelector, sortedNotebooksSelector } from "../store/selectors";
 import { SyncManager } from "../sync/SyncManager";
 import { performSync, setSettings } from "../store/actions";
 import { useCredentials } from "../credentials";
 
 import NoteList from "../components/NoteList";
-import NotebookFilter from "../components/NotebookFilter";
+import CollectionFilter from "../components/CollectionFilter";
 import SectionTabs from "../widgets/SectionTabs";
 import Appbar from "../widgets/Appbar";
 import AppbarButton from "../widgets/AppbarButton";
@@ -42,6 +42,7 @@ export default function NoteListScreen(props: PropsType) {
   const navigation = useNavigation<DefaultNavigationProp>();
   const syncGate = useSyncGate();
   const theme = useTheme();
+  const notebooks = useSelector(sortedNotebooksSelector);
   const notebookName = useSelector((state: StoreState) => (filterBy) ? state.cache.collections.get(filterBy)?.meta.name : undefined);
   const count = useSelector((state: StoreState) => {
     let ret = 0;
@@ -181,7 +182,8 @@ export default function NoteListScreen(props: PropsType) {
           </View>
         </TouchableRipple>
       </View>
-      <NotebookFilter
+      <CollectionFilter
+        collections={notebooks}
         value={filterBy}
         onChange={(colUid) => {
           dispatch(setSettings({
@@ -455,6 +457,14 @@ function RightAction(props: RightActionPropsType) {
         disabled={isSyncing}
         onPress={() => setSortBy((byName) ? "mtime" : "name")}
       />
+      {(colUid ?? filterBy) && (
+        <AppbarButton
+          icon="pencil-outline"
+          title="Edit notebook"
+          disabled={isSyncing}
+          onPress={() => navigation.navigate("CollectionEdit", { colUid: (colUid ?? filterBy)! })}
+        />
+      )}
       {(colUid ?? filterBy) && (
         <AppbarButton
           icon="notebook"

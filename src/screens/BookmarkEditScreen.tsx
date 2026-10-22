@@ -12,12 +12,12 @@ import { format } from "date-fns";
 
 import { useSyncGate } from "../SyncGate";
 import { useCredentials } from "../credentials";
-import { bookmarkCollectionsSelector, bookmarksSelector } from "../store/selectors";
+import { bookmarksSelector } from "../store/selectors";
 import { pushMessage } from "../store/actions";
 import { RootStackParamList } from "../RootStackParamList";
 import { goUp } from "../navigation";
 import {
-  Bookmark, BookmarkData, bookmarksFrom, allTags, bookmarkCollections, createBookmark, deleteBookmark, domainOf,
+  Bookmark, BookmarkData, bookmarksFrom, allTags, bookmarkListsSelector, createBookmark, deleteBookmark, domainOf,
   fetchTitle, findUrl, isValidUrl, normalizeUrl, updateBookmark, comparableUrl, savedFromLabel,
 } from "../bookmarks";
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
@@ -43,8 +43,7 @@ export default function BookmarkEditScreen(props: PropsType) {
   const bookmarkItems = useSelector(bookmarksSelector);
   const bookmarks = React.useMemo(() => bookmarksFrom(bookmarkItems), [bookmarkItems]);
   const knownTags = React.useMemo(() => allTags(bookmarks), [bookmarks]);
-  const cols = useSelector(bookmarkCollectionsSelector);
-  const collections = React.useMemo(() => bookmarkCollections({ cache: { collections: cols } }), [cols]);
+  const collections = useSelector(bookmarkListsSelector);
 
   const editing: Bookmark | undefined = (route.name === "BookmarkEdit") ?
     bookmarks.find((x) => (x.colUid === params.colUid) && (x.uid === params.itemUid)) : undefined;
@@ -54,7 +53,8 @@ export default function BookmarkEditScreen(props: PropsType) {
   const [title, setTitle] = React.useState<string>(editing?.title ?? params.title ?? "");
   const [note, setNote] = React.useState<string>(editing?.note ?? "");
   const [tags, setTags] = React.useState<string[]>(editing?.tags ?? []);
-  const [colUid, setColUid] = React.useState<string | undefined>(editing?.colUid);
+  // (a new one goes to the list it was added from)
+  const [colUid, setColUid] = React.useState<string | undefined>(editing?.colUid ?? ((isEdit) ? undefined : params.colUid));
   const [clipboardUrl, setClipboardUrl] = React.useState<string>();
   const [fetching, setFetching] = React.useState(false);
   const [saving, setSaving] = React.useState(false);

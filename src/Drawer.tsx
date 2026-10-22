@@ -162,6 +162,15 @@ export default function Drawer(props: PropsType) {
               }}
               icon="bookmark-multiple"
             />
+            <DrawerItem
+              label="Bookmark lists"
+              to="/bookmark-lists"
+              onPress={() => {
+                navigation.closeDrawer();
+                (navigation as any).navigate("Root", { screen: "BookmarkLists" });
+              }}
+              icon="bookmark-box-multiple"
+            />
             <Divider />
           </>
         )}

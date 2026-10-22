@@ -29,7 +29,13 @@ export type RootStackParamList = {
     itemUid: string;
   };
   Bookmarks: undefined;
-  BookmarkCreate: { url?: string, title?: string } | undefined;
+  // The bookmark lists, one list's bookmarks, and making or changing a list
+  BookmarkLists: undefined;
+  BookmarkList: { colUid: string };
+  BookmarkListCreate: undefined;
+  BookmarkListEdit: { colUid: string };
+  // (colUid: the list it's saved to at first)
+  BookmarkCreate: { url?: string, title?: string, colUid?: string } | undefined;
   BookmarkEdit: { colUid: string, itemUid: string };
   // Saving a link that was shared with the app
   BookmarkShare: { url?: string, title?: string, text?: string } | undefined;

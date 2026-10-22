@@ -1,12 +1,9 @@
 // SPDX-FileCopyrightText: © 2019 EteSync Authors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import * as React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { Text, TouchableRipple } from "react-native-paper";
-import { useSelector } from "react-redux";
 
-import { notebooksSelector } from "../store/selectors";
 import { defaultColor } from "../helpers";
 import { fonts, useTheme } from "../theme";
 
@@ -44,43 +41,42 @@ function Chip(props: ChipPropsType) {
 }
 
 interface PropsType {
-  // The uid of the notebook that is filtered by, if any
+  // The notebooks or bookmark lists, in the order they're shown in
+  collections: { uid: string, name: string, color?: string }[];
+  // The uid of the one that is filtered by, if any
   value: string | undefined;
   onChange: (colUid: string | undefined) => void;
+  // The chip of all of them ("All", or more when there are other chips next to these)
+  allLabel?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-// A row of chips to choose which notebook's notes to show
-export default function NotebookFilter(props: PropsType) {
+// A row of chips to choose which notebook's notes (or which list's bookmarks) to show
+export default function CollectionFilter(props: PropsType) {
   const theme = useTheme();
-  const cacheCollections = useSelector(notebooksSelector);
-  const notebooks = React.useMemo(() => Array.from(cacheCollections
-    .sort((a, b) => (a.meta!.name!.toUpperCase() >= b.meta!.name!.toUpperCase()) ? 1 : -1)
-    .map(({ meta }, uid) => ({ meta, uid }))
-    .values()
-  ), [cacheCollections]);
-  const { value, onChange } = props;
+  const { collections, value, onChange } = props;
 
   // Nothing to choose from
-  if (notebooks.length < 2) {
+  if (collections.length < 2) {
     return null;
   }
 
   return (
-    <View style={{ backgroundColor: theme.colors.background }}>
+    <View style={[{ backgroundColor: theme.colors.background }, props.style]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.row}
       >
-        <Chip label="All" selected={!value} onPress={() => onChange(undefined)} />
-        {notebooks.map((notebook) => (
+        <Chip label={props.allLabel ?? "All"} selected={!value} onPress={() => onChange(undefined)} />
+        {collections.map((col) => (
           <Chip
-            key={notebook.uid}
-            label={notebook.meta.name!}
-            color={notebook.meta.color || defaultColor}
-            selected={value === notebook.uid}
-            onPress={() => onChange((value === notebook.uid) ? undefined : notebook.uid)}
+            key={col.uid}
+            label={col.name}
+            color={col.color || defaultColor}
+            selected={value === col.uid}
+            onPress={() => onChange((value === col.uid) ? undefined : col.uid)}
           />
         ))}
       </ScrollView>

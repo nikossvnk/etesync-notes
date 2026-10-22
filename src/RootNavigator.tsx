@@ -26,6 +26,7 @@ import InvitationsScreen from "./screens/InvitationsScreen";
 import AccountWizardScreen from "./screens/AccountWizardScreen";
 import NotFoundScreen from "./screens/NotFoundScreen";
 import BookmarkListScreen from "./screens/BookmarkListScreen";
+import BookmarkListsScreen from "./screens/BookmarkListsScreen";
 import BookmarkEditScreen from "./screens/BookmarkEditScreen";
 import { BookmarkShareRoute } from "./screens/BookmarkShareScreen";
 
@@ -199,6 +200,25 @@ export default React.memo(function RootNavigator() {
                     <MenuButton />
                   ),
                 }}
+              />
+              <Stack.Screen
+                name="BookmarkLists"
+                component={BookmarkListsScreen}
+                options={{
+                  title: "Bookmark lists",
+                }}
+              />
+              <Stack.Screen
+                name="BookmarkList"
+                component={BookmarkListScreen}
+              />
+              <Stack.Screen
+                name="BookmarkListCreate"
+                component={CollectionEditScreen}
+              />
+              <Stack.Screen
+                name="BookmarkListEdit"
+                component={CollectionEditScreen}
               />
               <Stack.Screen
                 name="BookmarkCreate"
