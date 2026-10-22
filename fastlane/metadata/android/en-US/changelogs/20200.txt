@@ -1,0 +1,3 @@
+* Bookmark lists: choose a list to see only its bookmarks, and make, rename and delete lists from the menu, like notebooks
+* An Edit button for a notebook or a list, in its top bar
+* An odd last pinned note is as wide as the row, with the beginning of the note

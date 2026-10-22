@@ -1,6 +1,11 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.2.0
+* Bookmark lists: choose a list with the chips above the bookmarks to see only its bookmarks, and new ones are saved to it. "Bookmark lists" in the menu shows them, like the notebooks, and makes, renames, recolours and deletes them
+* An Edit button in the top bar of a notebook's notes, and of a list's bookmarks, goes straight to its name, description and colour
+* When there's an odd number of pinned notes, the last one is as wide as the row and shows the beginning of the note
+
 ## Version 2.1.0
 * Pinned notes: pin a note from its top bar, or several at once after a long press, and they're shown above the others, as cards. The pin syncs with the note
 * A note that was only pinned on the phone while it was changed elsewhere no longer gets a conflict copy

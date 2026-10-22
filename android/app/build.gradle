@@ -95,7 +95,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Can be set with -PappVersionCode=... and -PappVersionName=..., the release workflow does
         versionCode((findProperty('appVersionCode') ?: 1) as int)
-        versionName(findProperty('appVersionName') ?: "2.1.0")
+        versionName(findProperty('appVersionName') ?: "2.2.0")
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
