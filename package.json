@@ -70,7 +70,7 @@
     "babel-preset-expo": "~57.0.0",
     "eslint": "^9.0.0",
     "eslint-plugin-react": "^7.21.2",
-    "globals": "^16.5.0",
+    "globals": "^17.13.0",
     "patch-package": "^8.0.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0"
