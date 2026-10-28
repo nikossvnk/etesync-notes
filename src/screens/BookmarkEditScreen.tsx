@@ -18,7 +18,7 @@ import { RootStackParamList } from "../RootStackParamList";
 import { goUp } from "../navigation";
 import {
   Bookmark, BookmarkData, bookmarksFrom, allTags, bookmarkListsSelector, createBookmark, deleteBookmark, domainOf,
-  fetchTitle, findUrl, isValidUrl, normalizeUrl, updateBookmark, comparableUrl, savedFromLabel,
+  fetchTitle, findUrl, isValidUrl, normalizeUrl, updateBookmark, comparableUrl, savedFromLabel, withoutTracking, enteredUrl,
 } from "../bookmarks";
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
 import { SiteTile } from "./BookmarkListScreen";
@@ -49,7 +49,7 @@ export default function BookmarkEditScreen(props: PropsType) {
     bookmarks.find((x) => (x.colUid === params.colUid) && (x.uid === params.itemUid)) : undefined;
   const isEdit = route.name === "BookmarkEdit";
 
-  const [url, setUrl] = React.useState<string>(editing?.url ?? params.url ?? "");
+  const [url, setUrl] = React.useState<string>(editing?.url ?? withoutTracking(params.url ?? ""));
   const [title, setTitle] = React.useState<string>(editing?.title ?? params.title ?? "");
   const [note, setNote] = React.useState<string>(editing?.note ?? "");
   const [tags, setTags] = React.useState<string[]>(editing?.tags ?? []);
@@ -73,7 +73,7 @@ export default function BookmarkEditScreen(props: PropsType) {
       return;
     }
     if (!isEdit && params.url) {
-      setUrl(params.url);
+      setUrl(withoutTracking(params.url));
       setTitle(params.title ?? "");
       setNote("");
       setTags([]);
@@ -102,7 +102,7 @@ export default function BookmarkEditScreen(props: PropsType) {
     Clipboard.getStringAsync().then((text) => {
       const found = findUrl(text ?? "");
       if (found && !bookmarks.some((x) => comparableUrl(x.url) === comparableUrl(found))) {
-        setClipboardUrl(found);
+        setClipboardUrl(withoutTracking(found));
       }
     }).catch(() => undefined);
   }, []);
@@ -180,7 +180,7 @@ export default function BookmarkEditScreen(props: PropsType) {
         <Field
           label="Link"
           value={url}
-          onChangeText={setUrl}
+          onChangeText={(x) => setUrl((was) => enteredUrl(was, x))}
           placeholder="https://"
           keyboardType="url"
           autoCapitalize="none"

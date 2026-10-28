@@ -14,7 +14,7 @@ import { bookmarksSelector } from "../store/selectors";
 import { RootStackParamList } from "../RootStackParamList";
 import {
   Bookmark, allTags, bookmarkListsSelector, bookmarkTitle, bookmarksFrom, comparableUrl, createBookmark, deleteBookmark,
-  domainOf, fromShared, isValidUrl, normalizeUrl, revertBookmark, updateBookmark,
+  domainOf, fromShared, isValidUrl, normalizeUrl, revertBookmark, updateBookmark, withoutTracking,
 } from "../bookmarks";
 import { CollectionPicker, DuplicateNotice, Field, TagPicker } from "../components/BookmarkForm";
 import { SiteTile } from "./BookmarkListScreen";
@@ -57,7 +57,7 @@ export function ShareSheet(props: PropsType) {
 
   const initial = React.useMemo(() => {
     const found = fromShared(shared.text ?? shared.url ?? "", shared.subject);
-    return { url: normalizeUrl(shared.url || found.url), title: shared.title ?? found.title };
+    return { url: normalizeUrl(withoutTracking(shared.url || found.url)), title: shared.title ?? found.title };
   }, [shared]);
   // A link that was saved already is changed rather than saved a second time
   const [existing] = React.useState(() => bookmarks.find((x) => comparableUrl(x.url) === comparableUrl(initial.url)));

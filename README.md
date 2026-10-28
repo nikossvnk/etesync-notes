@@ -14,7 +14,8 @@ Secure, end-to-end encrypted, and privacy-respecting notes and bookmarks for And
 [Etebase](https://www.etebase.com) server (your own, or EteSync's).
 
 - Notes in Markdown, in notebooks, which can be searched, exported to a zip and imported from one
-- Bookmarks, saved from the share menu of other apps
+- Bookmarks, saved from the share menu of other apps, without the links' tracking parameters (e.g.
+  `utm_source`, `fbclid`)
 - Works offline, and syncs while the app is open
 
 ## Download

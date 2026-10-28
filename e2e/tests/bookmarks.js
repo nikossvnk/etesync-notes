@@ -1,6 +1,6 @@
 // Bookmarks: adding one (with a note and a tag), finding it, opening it, changing it, deleting it (and
-// undoing that), saving a shared link (and the same one again), that the notes don't show them, and
-// that they reach another device
+// undoing that), saving a shared link (and the same one again), taking tracking parameters out of
+// links, that the notes don't show them, and that they reach another device
 const { launch, session, run, check, api, unique } = require("../lib");
 run(async () => {
   const n = unique();
@@ -122,6 +122,26 @@ run(async () => {
   await A.btn(/^update bookmark$/i).click(); await A.wait(5000);
   saved = await alive(sharedUrl);
   check("and updating it keeps them", saved.length === 1 && saved[0].note === before.note && saved[0].name === `Shared page ${n} - Example`, saved);
+
+  // Tracking parameters are taken out of links: of shared and pasted ones at once, and of typed ones
+  // on saving
+  const tracked = `https://example.net/tracked-${n}`;
+  await A.p.goto(`${new URL(A.p.url()).origin}/share?text=${encodeURIComponent(`Tracked ${n} ${tracked}?id=3&utm_source=share&fbclid=IwAR0x`)}`); await A.wait(4000);
+  await A.btn(/^save$/i).click(); await A.wait(5000);
+  saved = (await api.bookmarks()).filter((x) => !x.deleted && x.url.startsWith(tracked));
+  check("a shared link is saved without its tracking parameters", saved.length === 1 && saved[0].url === `${tracked}?id=3` && saved[0].content === `${tracked}?id=3`, saved);
+  await A.p.goto(`${new URL(A.p.url()).origin}/share?text=${encodeURIComponent(`${sharedUrl}?utm_campaign=autumn`)}`); await A.wait(4000);
+  check("the same link with tracking parameters is the bookmark that's there", await A.has("Already in Bookmarks"));
+  await A.p.goto(`${new URL(A.p.url()).origin}/new-bookmark`); await A.wait(4000);
+  await field("Link").fill(`example.org/pasted-${n}?gclid=1&page=2`);
+  check("pasting a link takes them out in the field", await field("Link").inputValue() === `example.org/pasted-${n}?page=2`, await field("Link").inputValue());
+  await field("Link").fill("");
+  await field("Link").pressSequentially(`example.org/typed-${n}?utm_term=x`);
+  check("typing one leaves it as it's typed", await field("Link").inputValue() === `example.org/typed-${n}?utm_term=x`, await field("Link").inputValue());
+  await field("Title").fill(`Typed ${n}`);
+  await A.btn(/^save bookmark$/i).click(); await A.wait(6000);
+  saved = await alive(`https://example.org/typed-${n}`);
+  check("and saving it takes them out", saved.length === 1 && saved[0].name === `Typed ${n}` && saved[0].content === `https://example.org/typed-${n}`, saved);
   await A.ctx.close();
 
   // Another device gets them
