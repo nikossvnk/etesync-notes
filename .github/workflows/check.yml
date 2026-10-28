@@ -80,7 +80,6 @@ jobs:
         working-directory: e2e
         run: |
           node serve.js &
-          node setup.js
           node run.js
 
       - name: Show the logs of the test server
