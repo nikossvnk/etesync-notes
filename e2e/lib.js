@@ -40,13 +40,30 @@ exports.unique = () => String(Date.now() % 1000000);
 
 // Direct access to the account through the Etebase client, to prepare data and check the server's side
 exports.api = {
-  async login() {
-    return Etebase.Account.login(config.username, config.password, config.serverUrl);
+  async login(username = config.username) {
+    return Etebase.Account.login(username, config.password, config.serverUrl);
+  },
+  // Creates the test account (the test server has to allow signing up, like the test-server image of
+  // the Etebase server does), with a notebook, if it doesn't exist yet. Returns whether it created it.
+  async ensureAccount(username = config.username) {
+    let etebase, created = false;
+    try {
+      etebase = await this.login(username);
+    } catch (e) {
+      if (!(e instanceof Etebase.UnauthorizedError) && !(e instanceof Etebase.NotFoundError)) {
+        throw e;
+      }
+      etebase = await Etebase.Account.signup({ username, email: `${username}@example.invalid` }, config.password, config.serverUrl);
+      created = true;
+    }
+    await this.notebook(etebase, "My Notes");
+    await etebase.logout();
+    return created;
   },
   // Deletes all of the notebooks and bookmark collections (and so their items) and makes an empty "My Notes", so that the
   // notes of earlier runs don't fill the lists. Only for the test account!
-  async reset() {
-    const etebase = await this.login();
+  async reset(username = config.username) {
+    const etebase = await this.login(username);
     const colMgr = etebase.getCollectionManager();
     let deleted = 0;
     for (const col of [...await this.notebooks(etebase), ...await this.notebooks(etebase, "etebase.bookmark")]) {
