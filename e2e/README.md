@@ -29,17 +29,21 @@ They change the data of the test account, so never point them at a real server o
 3. A Chromium for Playwright: `npx playwright install chromium`, or set `E2E_CHROMIUM` to the path
    of a Chromium (or chrome-headless-shell) binary.
 
-4. Create the test account (only needed once per server), then run the tests:
+4. Run the tests:
 
    ```
-   node setup.js
    node run.js                    # all of them
    node run.js offline.js         # or some of them
    ```
 
-A full run takes about 15 minutes, as the tests wait for syncs and reconnections. It starts by
-emptying the test account (deleting all of its notebooks), as the notes that earlier runs left behind
-fill the lists the tests look in; `E2E_KEEP_DATA=1` skips that. Running some of the tests keeps the data.
+The tests wait for syncs and reconnections, so `run.js` runs 4 of them at a time (`E2E_JOBS` changes
+that). Every test has an account of its own, `E2E_USER` with the test's name after it
+(`e2e-tester-offline`), which `run.js` creates when it's missing. A full run starts by emptying these
+accounts (deleting all of their notebooks), as the notes that earlier runs left behind fill the lists
+the tests look in; `E2E_KEEP_DATA=1` skips that. Running some of the tests keeps the data.
+
+To run a test directly (`node tests/offline.js`), create its account first with `node setup.js`
+(both use `E2E_USER`).
 
 ## Configuration
 
@@ -47,7 +51,7 @@ fill the lists the tests look in; `E2E_KEEP_DATA=1` skips that. Running some of 
 |---|---|---|
 | `E2E_APP_URL` | `http://localhost:8765` | Where the web build is served |
 | `E2E_SERVER` | `http://127.0.0.1:3735` | The Etebase test server |
-| `E2E_USER`, `E2E_PASSWORD` | `e2e-tester`, `e2e-tester-password` | The test account, created by `setup.js` |
+| `E2E_USER`, `E2E_PASSWORD` | `e2e-tester`, `e2e-tester-password` | The test account (and the start of the names of the tests' accounts) |
 | `E2E_CHROMIUM` | Playwright's Chromium | The Chromium binary to use |
 
 ## Writing tests
