@@ -68,7 +68,7 @@
     "@types/redux-actions": "^2.6.5",
     "@types/redux-logger": "^3.0.13",
     "babel-preset-expo": "~57.0.0",
-    "eslint": "^9.0.0",
+    "eslint": "^10.13.0",
     "eslint-plugin-react": "^7.21.2",
     "globals": "^17.13.0",
     "patch-package": "^8.0.1",
