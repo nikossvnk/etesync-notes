@@ -1,6 +1,11 @@
 # Changelog
 *NOTE:* may be removed in the future in favor of the fastlane changelog.
 
+## Version 2.3.0
+* Bookmarks are saved without the tracking parameters of their links (like utm_source or fbclid), whether they're shared from another app, pasted or typed
+* A link in a note opens once, instead of twice
+* Only web, email and phone links in notes are opened, as a note in a shared notebook can come from someone else
+
 ## Version 2.2.0
 * Bookmark lists: choose a list with the chips above the bookmarks to see only its bookmarks, and new ones are saved to it. "Bookmark lists" in the menu shows them, like the notebooks, and makes, renames, recolours and deletes them
 * An Edit button in the top bar of a notebook's notes, and of a list's bookmarks, goes straight to its name, description and colour

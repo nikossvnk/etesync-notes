@@ -1,0 +1,3 @@
+* Bookmarks are saved without the tracking parameters of their links
+* A link in a note opens once, instead of twice
+* Only web, email and phone links in notes are opened
