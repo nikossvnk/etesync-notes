@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { AppState, AppStateStatus, Platform } from "react-native";
+import { AppState, AppStateStatus, Linking, Platform } from "react-native";
 import * as Etebase from "etebase";
 
 import { logger } from "./logging";
@@ -204,4 +204,25 @@ export function serverName(serverUrl: string) {
     return trimmed;
   }
   return (match[1].toLowerCase() === "http") ? trimmed : match[2];
+}
+
+// Links from synced data (e.g. in a note of a shared notebook, which others can write) are only
+// opened when they are web, email or phone links. Others (e.g. "intent:" or another app's scheme)
+// could start other apps with what the link says.
+export function safeExternalUrl(url: string): string | undefined {
+  const trimmed = url.trim();
+  // A web address without its scheme (e.g. "example.com/page") is a web link
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(trimmed)?.[1].toLowerCase();
+  if (!scheme) {
+    return (trimmed) ? `https://${trimmed.replace(/^\/+/, "")}` : undefined;
+  }
+  // (React Native's URL doesn't parse links, so the scheme is checked here)
+  return (["http", "https", "mailto", "tel"].includes(scheme)) ? trimmed : undefined;
+}
+
+export function openExternalUrl(url: string) {
+  const safe = safeExternalUrl(url);
+  if (safe) {
+    Linking.openURL(safe).catch(() => undefined);
+  }
 }
