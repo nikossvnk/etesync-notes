@@ -29,6 +29,9 @@ updates:
       - dependency-name: "react-native-web"
       - dependency-name: "@react-native-async-storage/async-storage"
       - dependency-name: "@react-native-community/netinfo"
+      # Babel 8 waits for Expo: its preset and bundler (and React Native's preset) need Babel 7
+      - dependency-name: "@babel/*"
+        update-types: ["version-update:semver-major"]
       # patches/ changes it, and the patch is for this version
       - dependency-name: "react-native-sodium"
 
