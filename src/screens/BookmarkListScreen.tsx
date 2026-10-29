@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import * as React from "react";
-import { FlatList, Linking, Platform, Share, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Platform, Share, StyleSheet, TextInput, View } from "react-native";
 import { FAB, Snackbar, Text, TouchableRipple } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { RouteProp, useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -15,6 +15,7 @@ import { bookmarksSelector } from "../store/selectors";
 import { performSync, pushMessage, setSettings } from "../store/actions";
 import { SyncManager } from "../sync/SyncManager";
 import { useCredentials } from "../credentials";
+import { openExternalUrl } from "../helpers";
 import { Bookmark, bookmarksFrom, allTags, bookmarkListsSelector, bookmarkTitle, deleteBookmark, domainOf, restoreBookmark } from "../bookmarks";
 import { shortDate } from "../components/NoteList";
 import CollectionFilter from "../components/CollectionFilter";
@@ -59,10 +60,6 @@ export function SiteTile(props: { url: string, size?: number }) {
 
 const ALL = "";
 const UNTAGGED = "\u0000untagged";
-
-export function openLink(url: string) {
-  Linking.openURL(url).catch(() => undefined);
-}
 
 interface PropsType {
   route: RouteProp<RootStackParamList, "Bookmarks"> | RouteProp<RootStackParamList, "BookmarkList">;
@@ -272,7 +269,7 @@ export default function BookmarkListScreen(props: PropsType) {
               </View>
             </View>
             <SheetItem icon="open-in-new" label="Open in browser" onPress={() => {
-              setMenuFor(undefined); openLink(menuFor.url);
+              setMenuFor(undefined); openExternalUrl(menuFor.url);
             }} />
             <SheetItem icon="content-copy" label="Copy link" onPress={() => copy(menuFor)} />
             <SheetItem icon="share-variant-outline" label="Share…" onPress={() => share(menuFor)} />
@@ -351,7 +348,7 @@ const BookmarkRow = React.memo(function BookmarkRow(props: { bookmark: Bookmark,
     <GroupedRow
       first={first}
       last={last}
-      onPress={() => openLink(bookmark.url)}
+      onPress={() => openExternalUrl(bookmark.url)}
       onLongPress={onMenu}
       accessibilityRole="link"
       accessibilityLabel={title}
