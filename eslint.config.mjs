@@ -6,6 +6,7 @@ import tseslint from "typescript-eslint";
 import react from "eslint-plugin-react";
 import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
+import reactPackage from "react/package.json" with { type: "json" };
 
 export default tseslint.config(
   {
@@ -18,7 +19,8 @@ export default tseslint.config(
   {
     settings: {
       react: {
-        version: "detect",
+        // eslint-plugin-react's "detect" uses context.getFilename(), which ESLint 10 removed
+        version: reactPackage.version,
       },
     },
   },
