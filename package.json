@@ -31,7 +31,7 @@
     "expo-splash-screen": "~57.0.11",
     "fflate": "^0.8.3",
     "highlight-words-core": "^2.0.0",
-    "immutable": "^5.0.0",
+    "immutable": "^5.1.10",
     "localforage": "^1.10.0",
     "minisearch": "^7.0.0",
     "react": "19.2.3",
@@ -74,7 +74,7 @@
     "globals": "^17.14.0",
     "patch-package": "^8.0.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.72.2"
   },
   "overrides": {
     "react-native-markdown-display": {
